@@ -1,37 +1,21 @@
 <template>
-  <v-app>
-    <v-app-bar app>
-      <v-toolbar-title class="headline text-uppercase">
-        <span>Vuetify</span>
-        <span class="font-weight-light">MATERIAL DESIGN</span>
-      </v-toolbar-title>
-      <v-spacer></v-spacer>
-      <v-btn
-        text
-        href="https://github.com/vuetifyjs/vuetify/releases/latest"
-        target="_blank"
-      >
-        <span class="mr-2">Latest Release</span>
-      </v-btn>
-    </v-app-bar>
-
-    <v-content>
-      <HelloWorld />
-    </v-content>
-  </v-app>
+  <div>
+    <Navbar></Navbar>
+  </div>
 </template>
 
-<script lang="ts">
-import Vue from "vue";
-import HelloWorld from "./components/HelloWorld.vue";
+<script>
+import { Vue, Component } from "vue-property-decorator";
+import Navbar from "@/components/Navbar.vue";
 
-export default Vue.extend({
-  name: "App",
+@Component({
   components: {
-    HelloWorld
-  },
-  data: () => ({
-    //
-  })
-});
+    Navbar
+  }
+})
+export default class App extends Vue {
+  clickedMethod(s) {
+    console.log("Clickeddd");
+  }
+}
 </script>

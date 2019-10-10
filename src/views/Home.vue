@@ -1,14 +1,13 @@
 <template>
-  <HelloWorld />
+  <div>{{ loggedInUserObj }}</div>
 </template>
 
-<script lang="ts">
-import Vue from "vue";
-import HelloWorld from "../components/HelloWorld.vue";
+<script>
+import { Vue, Component } from "vue-property-decorator";
+import user from "@/store/modules/user.ts";
 
-export default Vue.extend({
-  components: {
-    HelloWorld
-  }
-});
+@Component
+export default class Home extends Vue {
+  loggedInUserObj = user.loggedInUserObj;
+}
 </script>
