@@ -1,34 +1,4 @@
 <template>
-  <!-- <div class="auth-page">
-    <div class="container page">
-      <div class="row">
-        <div class="col-md-6 offset-md-3 col-xs-12">
-          <h1 class="text-xs-center">Login</h1>
-
-          <ul class="error-messages"></ul>
-
-          <form>
-            <fieldset class="form-group">
-              <input
-                class="form-control form-control-lg"
-                type="text"
-                v-model="userId"
-                placeholder="User ID"
-              />
-            </fieldset>
-            <button
-              @click="loginSubmit()"
-              :disabled="!userId.length > 0"
-              class="btn btn-lg btn-primary pull-xs-right"
-            >
-              Login
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>-->
-
   <div>
     <v-app id="loginpage">
       <v-form>
@@ -56,8 +26,13 @@
 import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user.ts";
 import { UserOnSubmit, UserResponse } from "@/store/models/models";
+import Piechart from "@/components/commons/Piechart.vue";
 
-@Component
+@Component({
+  components: {
+    Piechart
+  }
+})
 export default class Login extends Vue {
   userId = "";
 
@@ -65,7 +40,13 @@ export default class Login extends Vue {
     console.log("Login called", this.userId, user);
 
     let userSubmit: UserOnSubmit = { userid: this.userId };
-    const userResponse = user.loginSubmit1(userSubmit);
+    const userResponse = user.loginSubmit1(userSubmit).then((user: any) => {
+      if (user.id > 0) {
+        this.$router.push("/");
+      } else {
+        this.$router.push("/login");
+      }
+    });
 
     // if (userResponse.id > 0) {
     // }

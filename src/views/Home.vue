@@ -1,13 +1,21 @@
 <template>
-  <div>{{ loggedInUserObj }}</div>
+  <div>
+    <Piechart />
+    <Piechart />
+  </div>
 </template>
 
 <script>
 import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user.ts";
+import Piechart from "@/components/commons/Piechart.vue";
 
-@Component
+@Component({
+  components: { Piechart }
+})
 export default class Home extends Vue {
-  loggedInUserObj = user.loggedInUserObj;
+  getUserObj() {
+    return user.loggedInUserObj;
+  }
 }
 </script>
