@@ -1,5 +1,10 @@
 import axios from "axios";
-import { UserOnSubmit, UserResponse } from "@/store/models/models";
+import {
+  UserOnSubmit,
+  UserResponse,
+  AppliedLeavesResponse,
+  PublicHolidayResponse
+} from "@/store/models/models";
 
 export const api = axios.create({
   baseURL: "https://leaves.speakup.systems/api",
@@ -22,6 +27,40 @@ export async function login1(
     const resp = await axios.get("/users?name=" + user.userid);
 
     return resp.data as UserResponse;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getAppliedLeaves(
+  userId: number
+): Promise<AppliedLeavesResponse[] | undefined> {
+  axios.defaults.baseURL = "https://leaves.speakup.systems/api";
+  axios.defaults.headers.get["Content-type"] = "application/json;charset=utf-8";
+  axios.defaults.headers.get["x-api-key"] =
+    "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE";
+
+  try {
+    const resp = await axios.get("/leaves?userId=" + userId);
+
+    return resp.data as AppliedLeavesResponse[];
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getPublicHolidays(): Promise<
+  PublicHolidayResponse[] | undefined
+> {
+  axios.defaults.baseURL = "https://leaves.speakup.systems/api";
+  axios.defaults.headers.get["Content-type"] = "application/json;charset=utf-8";
+  axios.defaults.headers.get["x-api-key"] =
+    "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE";
+
+  try {
+    const resp = await axios.get("/public-holidays");
+
+    return resp.data as PublicHolidayResponse[];
   } catch (error) {
     console.log(error);
   }

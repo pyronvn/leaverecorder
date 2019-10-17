@@ -27,9 +27,9 @@
               <v-icon @click="clickedMethod($event)">{{ item.icon }}</v-icon>
             </v-list-item-action>
             <v-list-item-content>
-              <v-list-item-title @click="clickedMethod($event)">{{
-                item.text
-              }}</v-list-item-title>
+              <v-list-item-title @click="clickedMethod($event)">
+                {{ item.text }}
+              </v-list-item-title>
             </v-list-item-content>
           </v-list-item>
         </template>
@@ -75,14 +75,21 @@
 <script lang="ts">
 import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user";
+import Snackbar from "@/components/commons/Snackbar.vue";
+import snackbarstore from "@/store/modules/snackbar-store.ts";
 
-@Component
+@Component({
+  components: { Snackbar }
+})
 export default class Navbar extends Vue {
   clickedMethod(s: any) {
     console.log("Clickeddd");
   }
   drawer = null;
   dialog = false;
+
+  color = "";
+  text = "";
 
   items = [
     { icon: "contacts", text: "Dashboard" },
@@ -92,5 +99,6 @@ export default class Navbar extends Vue {
   get loggedInUserName() {
     return user.userName;
   }
+  getSnackBarData() {}
 }
 </script>
