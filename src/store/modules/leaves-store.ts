@@ -8,9 +8,10 @@ import {
 import store from "@/store";
 import {
   AppliedLeavesResponse,
-  PublicHolidayResponse
+  PublicHolidayResponse,
+  SubmittedLeave
 } from "@/store/models/models";
-import { getAppliedLeaves, getPublicHolidays } from "@/store/api";
+import { getAppliedLeaves, getPublicHolidays, applyLeave } from "@/store/api";
 
 @Module({
   namespaced: true,
@@ -79,6 +80,11 @@ class LeavesModule extends VuexModule {
     const publicHolidays = await getPublicHolidays();
 
     return publicHolidays;
+  }
+
+  @Action
+  async applySubmittedLeave(appliedLeave: SubmittedLeave, id: number) {
+    const resp = await applyLeave(appliedLeave, id);
   }
 }
 

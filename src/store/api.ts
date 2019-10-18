@@ -3,7 +3,8 @@ import {
   UserOnSubmit,
   UserResponse,
   AppliedLeavesResponse,
-  PublicHolidayResponse
+  PublicHolidayResponse,
+  SubmittedLeave
 } from "@/store/models/models";
 
 export const api = axios.create({
@@ -61,6 +62,24 @@ export async function getPublicHolidays(): Promise<
     const resp = await axios.get("/public-holidays");
 
     return resp.data as PublicHolidayResponse[];
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function applyLeave(
+  appliedLeave: SubmittedLeave,
+  id: number
+): Promise<any | undefined> {
+  axios.defaults.baseURL = "https://leaves.speakup.systems/api";
+  axios.defaults.headers.get["Content-type"] = "application/json;charset=utf-8";
+  axios.defaults.headers.get["x-api-key"] =
+    "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE";
+
+  try {
+    const resp = await axios.post("/public-holidays");
+
+    return resp.data as any;
   } catch (error) {
     console.log(error);
   }

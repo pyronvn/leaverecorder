@@ -1,6 +1,7 @@
 <template>
   <v-app id="inspire">
     <v-navigation-drawer
+      v-if="isUserLoggedIn()"
       v-model="drawer"
       :clipped="$vuetify.breakpoint.lgAndUp"
       app
@@ -27,9 +28,9 @@
               <v-icon @click="clickedMethod($event)">{{ item.icon }}</v-icon>
             </v-list-item-action>
             <v-list-item-content>
-              <v-list-item-title @click="clickedMethod($event)">
-                {{ item.text }}
-              </v-list-item-title>
+              <v-list-item-title @click="clickedMethod($event)">{{
+                item.text
+              }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
         </template>
@@ -43,7 +44,10 @@
       dark
     >
       <v-toolbar-title style="width: 300px" class="ml-0 pl-4">
-        <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+        <v-app-bar-nav-icon
+          v-if="isUserLoggedIn()"
+          @click.stop="drawer = !drawer"
+        ></v-app-bar-nav-icon>
         <span class="hidden-sm-and-down">Leave Recorder</span>
       </v-toolbar-title>
       <div class="flex-grow-1"></div>
@@ -87,6 +91,10 @@ export default class Navbar extends Vue {
   }
   drawer = null;
   dialog = false;
+
+  isUserLoggedIn() {
+    return user.userName;
+  }
 
   color = "";
   text = "";

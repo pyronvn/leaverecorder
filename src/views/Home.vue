@@ -19,12 +19,13 @@
   </div>
 </template>
 
-<script lang = 'ts'>
+<script lang="ts">
 import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user.ts";
 import Piechart from "@/components/commons/Piechart.vue";
 import leaves from "@/store/modules/leaves-store.ts";
 import { AppliedLeavesResponse } from "@/store/models/models";
+import LeaveUtils from "@/components/commons/LeaveUtil";
 
 @Component({
   components: { Piechart }
@@ -32,6 +33,8 @@ import { AppliedLeavesResponse } from "@/store/models/models";
 export default class Home extends Vue {
   piechartVacationLeavesTitle = "Vacation Leaves";
   piechartSickLeavesTitle = "Sick Leaves";
+
+  publicHolidaysDates: any[] = [];
 
   sickLeavesRemaining = 0;
   vacationLeavesRemaining = 0;
@@ -48,6 +51,13 @@ export default class Home extends Vue {
         let leaveData = this.calculateLeaveData(appliedLeaves);
         if (leaveData) {
           this.calculateLeaveCountForPiechart(leaveData[0], leaveData[1]);
+        }
+      });
+
+      leaves.getPublicHoliday().then(publicholidays => {
+        if (publicholidays) {
+          let resp = LeaveUtils.groupPublicHolidays(publicholidays);
+          console.log("resp", resp);
         }
       });
     }

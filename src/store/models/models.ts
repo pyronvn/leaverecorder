@@ -48,3 +48,14 @@ export enum LeaveType {
   SICK = "sick",
   VACATION = "vacation"
 }
+
+export interface SubmittedLeave {
+  type: string;
+  date: string;
+}
+
+export interface PublicHolidayGrouped {
+  startDate: string;
+  name: string;
+  endDate: string;
+}

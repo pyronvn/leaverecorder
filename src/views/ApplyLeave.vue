@@ -5,32 +5,33 @@
       <v-tab>View History</v-tab>
 
       <v-tab-item>
-        <v-card flat tile>
-          <v-container fluid>
-            <v-row align="center">
-              <v-col class="d-flex" cols="12" md="2">
-                <v-select :items="items" label="Leave Type"></v-select>
-              </v-col>
-            </v-row>
-            <v-row>
-              <v-col cols="12" md="4">
-                <v-date-picker
-                  v-model="dates"
-                  range
-                  :no-title="notitle"
-                  :allowed-dates="holidaysDates"
-                  :events="functionEvents"
-                ></v-date-picker>
-              </v-col>
-            </v-row>
+        <v-form>
+          <v-card flat tile>
+            <v-container fluid>
+              <v-row align="center">
+                <v-col class="d-flex" cols="12" md="2">
+                  <v-select v-model="leaveType" :items="items" label="Leave Type"></v-select>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="12" md="4">
+                  <v-date-picker v-model="dates" range :no-title="notitle" :events="functionEvents"></v-date-picker>
+                </v-col>
+              </v-row>
 
-            <v-row>
-              <v-col cols="12" md="4">
-                <v-btn depressed color="primary">Apply Leave</v-btn>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-card>
+              <v-row>
+                <v-col cols="12" md="4">
+                  <v-btn
+                    depressed
+                    color="primary"
+                    @click.prevent="applyLeave()"
+                    :disabled="isFormValid() && userObj !== null"
+                  >Apply Leave</v-btn>
+                </v-col>
+              </v-row>
+            </v-container>
+          </v-card>
+        </v-form>
       </v-tab-item>
 
       <v-tab-item>
@@ -39,7 +40,6 @@
             :fixed-header="fixedHeader"
             :headers="headers"
             :items="leavesData"
-            :sort-by="['calories', 'fat']"
             :sort-desc="[false, true]"
             :event-color="date => (date[9] % 2 ? 'red' : 'yellow')"
             :events="functionEvents"
@@ -60,14 +60,17 @@
 import { Vue, Component } from "vue-property-decorator";
 import leaves from "@/store/modules/leaves-store";
 import moment from "moment";
+import user from "@/store/modules/user.ts";
 import {
   PublicHolidayResponse,
   AppliedLeavesResponse,
   RangeLeaves,
   CombinedLeave,
-  LeaveType
+  LeaveType,
+  SubmittedLeave
 } from "@/store/models/models";
 import { Computed } from "vuex";
+import LeaveUtils from "@/components/commons/LeaveUtil";
 
 @Component
 export default class ApplyLeave extends Vue {
@@ -76,10 +79,15 @@ export default class ApplyLeave extends Vue {
   min = "";
   tab = null;
   dates = [];
-  items = Object.keys(LeaveType).map((k: any) => LeaveType[k].toUpperCase());
+  leaveType = "";
+  items = ["Sick", "Vacation"]; //Object.keys(LeaveType).map((k: any) => LeaveType[k].toUpperCase());
   leavesData: AppliedLeavesResponse[] = [];
   publicHolidaysDates: any[] = [];
   leavesTakenDates: any[] = [];
+
+  userObj = user.userObject;
+
+  completeLeaveList: string[] = [];
 
   fixedHeader = false;
   notitle = true;
@@ -98,6 +106,7 @@ export default class ApplyLeave extends Vue {
   beforeCreate() {
     leaves.getPublicHoliday().then(publicholidays => {
       if (publicholidays) {
+        LeaveUtils.groupPublicHolidays(publicholidays);
         console.log("Before create", publicholidays);
         publicholidays.forEach((val: any) => {
           console.log("Value", val.date);
@@ -127,7 +136,7 @@ export default class ApplyLeave extends Vue {
   holidaysDates(val: any) {
     // console.log("Allowed", val);
 
-    if (this.publicHolidaysDates.indexOf(val) > -1) {
+    if (this.completeLeaveList.indexOf(val) > -1) {
       return 0;
     } else {
       return 1;
@@ -163,12 +172,12 @@ export default class ApplyLeave extends Vue {
       });
     });
 
-    console.log("public holidays", holidays);
+    console.log("public holidays");
     if (holidays) {
       holidays.forEach(data => {
         combinedData.push({
           date: data.date,
-          type: "PublicHoliday"
+          type: "PublicHoliday" + data.name
         });
       });
     }
@@ -179,13 +188,13 @@ export default class ApplyLeave extends Vue {
     console.log("Combined DAta after sort", combinedData);
     combinedData.concat(this.populateWeekends(combinedData));
 
-    let groupedLeaves = this.splitSickLeavesAndVacation(combinedData);
+    this.completeLeaveList = combinedData.map(data => data.date);
 
+    let groupedLeaves = this.preparedRangedData(combinedData);
     // console.log("Combined DAta getting weekends", combinedData);
     //  this.preparedRangedData(combinedData);
     console.log("Range data", groupedLeaves);
-
-    this.removeUnnecessaryWeekends(groupedLeaves);
+    // LeaveUtils.cleanupVacationLeaves(groupedLeaves);
   }
 
   sortCombinedData(combinedData: CombinedLeave[]): CombinedLeave[] {
@@ -223,7 +232,6 @@ export default class ApplyLeave extends Vue {
 
     this.sortCombinedData(combinedData);
     this.getFirstSaturday(combinedData);
-    this.sortCombinedData(combinedData);
 
     return combinedData;
   }
@@ -251,7 +259,6 @@ export default class ApplyLeave extends Vue {
         });
 
         console.log("After first saturday", combinedData);
-
         return this.sortCombinedData(combinedData);
       }
     } else return [];
@@ -274,34 +281,41 @@ export default class ApplyLeave extends Vue {
     } else {
       let startindexCounter = 0;
       for (let index = 0; index < combinedData.length - 1; index++) {
-        let tempStartDate = moment(combinedData[index].date);
-        let tempEndDate = moment(combinedData[index + 1].date);
+        if (
+          combinedData[startindexCounter].type === "vacation" ||
+          combinedData[startindexCounter].type === "sick"
+        ) {
+          let tempStartDate = moment(combinedData[index].date);
+          let tempEndDate = moment(combinedData[index + 1].date);
 
-        if (tempEndDate.diff(tempStartDate, "days") === 1) {
-          leaveType.push(combinedData[index].type);
-          if (index === combinedData.length - 2) {
-            let rangeLeave = new RangeLeaves();
-            rangeLeave.startDate = combinedData[startindexCounter].date;
-            rangeLeave.endDate = combinedData[index + 1].date;
-            leaveType.push(combinedData[index + 1].type);
-            rangeLeave.type = leaveType;
+          if (tempEndDate.diff(tempStartDate, "days") === 1) {
+            leaveType.push(combinedData[index].type);
+            if (index === combinedData.length - 2) {
+              let rangeLeave = new RangeLeaves();
+              rangeLeave.startDate = combinedData[startindexCounter].date;
+              rangeLeave.endDate = combinedData[index + 1].date;
+              leaveType.push(combinedData[index + 1].type);
+              rangeLeave.type = leaveType;
 
-            groupedLeaves.push(rangeLeave);
+              groupedLeaves.push(rangeLeave);
 
-            leaveType = [];
-            startindexCounter = index + 1;
+              leaveType = [];
+              startindexCounter = index + 1;
+            } else {
+              continue;
+            }
           } else {
-            continue;
+            if (combinedData[index].type === "vacation") {
+              let rangeLeave = new RangeLeaves();
+              leaveType.push(combinedData[index].type);
+              rangeLeave.startDate = combinedData[startindexCounter].date;
+              rangeLeave.endDate = combinedData[index].date;
+              rangeLeave.type = leaveType;
+              groupedLeaves.push(rangeLeave);
+              leaveType = [];
+              startindexCounter = index + 1;
+            }
           }
-        } else {
-          let rangeLeave = new RangeLeaves();
-          leaveType.push(combinedData[index].type);
-          rangeLeave.startDate = combinedData[startindexCounter].date;
-          rangeLeave.endDate = combinedData[index].date;
-          rangeLeave.type = leaveType;
-          groupedLeaves.push(rangeLeave);
-          leaveType = [];
-          startindexCounter = index + 1;
         }
       }
     }
@@ -335,20 +349,56 @@ export default class ApplyLeave extends Vue {
     return sickLeave.concat(vacationWithWeekend);
   }
 
-  removeUnnecessaryWeekends(groupedLeaves: RangeLeaves[]) {
-    let finalGroupedData: RangeLeaves[] = [];
-    if (groupedLeaves.length > 0) {
-      groupedLeaves.forEach((data: RangeLeaves) => {
-        if (data.type.indexOf("sick") > 0) {
-          finalGroupedData.push(data);
-        } else if (data.type.length > 2) {
-          console.log("test");
-        } else {
-          console.log("test");
-        }
-      });
+  isFormValid() {
+    if (this.leaveType && this.dates && this.dates.length > 0) {
+      return false;
     }
-    return finalGroupedData;
+    return true;
+  }
+
+  applyLeave() {
+    console.log("completeLeaveList", this.completeLeaveList);
+    let leaveType = this.leaveType;
+    let leaveRange = this.dates;
+
+    let appliedLeaveDates: SubmittedLeave[] = [];
+    let endAppliedDate = null;
+
+    let startAppliedDate = moment(leaveRange[0]);
+
+    console.log("leaveRange[0]", leaveRange[0], startAppliedDate);
+
+    if (leaveRange.length > 1) {
+      endAppliedDate = moment(leaveRange[1]);
+      console.log("endAppliedDate", leaveRange[1], endAppliedDate);
+
+      if (startAppliedDate.isAfter(endAppliedDate)) {
+        let tempDate = startAppliedDate;
+        startAppliedDate = endAppliedDate;
+        endAppliedDate = tempDate;
+      }
+
+      while (startAppliedDate.clone().isSameOrBefore(endAppliedDate)) {
+        let tempDate = startAppliedDate.clone().format("YYYY-MM-DD");
+        console.log("tempDate", tempDate);
+
+        if (this.completeLeaveList.indexOf(tempDate) === -1) {
+          appliedLeaveDates.push({
+            date: tempDate,
+            type: leaveType
+          });
+        }
+        startAppliedDate.add(1, "days");
+      }
+
+      if (user.userObject) {
+        console.log("appliedLeaveDates", appliedLeaveDates);
+      }
+    } else {
+      let submittedLeave = {} as SubmittedLeave;
+      submittedLeave.date = leaveRange[0];
+      submittedLeave.type = leaveType.toLowerCase();
+    }
   }
 }
 </script>
