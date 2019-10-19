@@ -23,6 +23,7 @@ export interface PublicHolidayResponse {
 }
 
 export interface CombinedLeave {
+  id: number;
   date: string;
   type: string;
 }
@@ -36,11 +37,13 @@ export class RangeLeaves {
   startDate: string;
   endDate: string;
   type: string[];
+  leaveRange: AppliedLeavesResponse[];
 
   constructor() {
     this.startDate = "";
     this.endDate = "";
     this.type = [];
+    this.leaveRange = [];
   }
 }
 
@@ -49,7 +52,8 @@ export enum LeaveType {
   VACATION = "vacation"
 }
 
-export interface SubmittedLeave {
+export interface Leaves {
+  userId: number;
   type: string;
   date: string;
 }
@@ -58,4 +62,8 @@ export interface PublicHolidayGrouped {
   startDate: string;
   name: string;
   endDate: string;
+}
+
+export interface DeleteLeave {
+  ids: string;
 }

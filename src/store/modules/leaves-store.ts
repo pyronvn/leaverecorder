@@ -9,9 +9,14 @@ import store from "@/store";
 import {
   AppliedLeavesResponse,
   PublicHolidayResponse,
-  SubmittedLeave
+  Leaves
 } from "@/store/models/models";
-import { getAppliedLeaves, getPublicHolidays, applyLeave } from "@/store/api";
+import {
+  getAppliedLeaves,
+  getPublicHolidays,
+  applyLeave,
+  deleteLeaves
+} from "@/store/api";
 
 @Module({
   namespaced: true,
@@ -83,8 +88,13 @@ class LeavesModule extends VuexModule {
   }
 
   @Action
-  async applySubmittedLeave(appliedLeave: SubmittedLeave, id: number) {
-    const resp = await applyLeave(appliedLeave, id);
+  async applySubmittedLeave(appliedLeave: Leaves[]) {
+    const resp = await applyLeave(appliedLeave);
+  }
+
+  @Action
+  async deleteLeaves(leave: string) {
+    const resp = await deleteLeaves(leave);
   }
 }
 

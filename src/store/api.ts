@@ -4,28 +4,24 @@ import {
   UserResponse,
   AppliedLeavesResponse,
   PublicHolidayResponse,
-  SubmittedLeave
+  Leaves,
+  DeleteLeave
 } from "@/store/models/models";
 
 export const api = axios.create({
   baseURL: "https://leaves.speakup.systems/api",
-  headers: [
-    { "Content-type": "application/json;charset=utf-8" },
-    { "x-api-key": "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE" }
-  ]
+  headers: {
+    "Content-Type": "application/json;charset=utf-8",
+    "x-api-key": "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE"
+  }
 });
 
 export async function login1(
   user: UserOnSubmit
 ): Promise<UserResponse | undefined> {
-  axios.defaults.baseURL = "https://leaves.speakup.systems/api";
-  axios.defaults.headers.get["Content-type"] = "application/json;charset=utf-8";
-  axios.defaults.headers.get["x-api-key"] =
-    "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE";
-
   try {
     console.log("Async login", user.userid);
-    const resp = await axios.get("/users?name=" + user.userid);
+    const resp = await api.get("/users?name=" + user.userid);
 
     return resp.data as UserResponse;
   } catch (error) {
@@ -36,13 +32,8 @@ export async function login1(
 export async function getAppliedLeaves(
   userId: number
 ): Promise<AppliedLeavesResponse[] | undefined> {
-  axios.defaults.baseURL = "https://leaves.speakup.systems/api";
-  axios.defaults.headers.get["Content-type"] = "application/json;charset=utf-8";
-  axios.defaults.headers.get["x-api-key"] =
-    "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE";
-
   try {
-    const resp = await axios.get("/leaves?userId=" + userId);
+    const resp = await api.get("/leaves?userId=" + userId);
 
     return resp.data as AppliedLeavesResponse[];
   } catch (error) {
@@ -53,13 +44,8 @@ export async function getAppliedLeaves(
 export async function getPublicHolidays(): Promise<
   PublicHolidayResponse[] | undefined
 > {
-  axios.defaults.baseURL = "https://leaves.speakup.systems/api";
-  axios.defaults.headers.get["Content-type"] = "application/json;charset=utf-8";
-  axios.defaults.headers.get["x-api-key"] =
-    "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE";
-
   try {
-    const resp = await axios.get("/public-holidays");
+    const resp = await api.get("/public-holidays");
 
     return resp.data as PublicHolidayResponse[];
   } catch (error) {
@@ -68,16 +54,23 @@ export async function getPublicHolidays(): Promise<
 }
 
 export async function applyLeave(
-  appliedLeave: SubmittedLeave,
-  id: number
+  appliedLeave: Leaves[]
 ): Promise<any | undefined> {
-  axios.defaults.baseURL = "https://leaves.speakup.systems/api";
-  axios.defaults.headers.get["Content-type"] = "application/json;charset=utf-8";
-  axios.defaults.headers.get["x-api-key"] =
-    "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE";
-
   try {
-    const resp = await axios.post("/public-holidays");
+    let body = {
+      leaves: appliedLeave
+    };
+    const resp = await api.post("/leaves", body);
+
+    return resp.data as any;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function deleteLeaves(leaves: string): Promise<any | undefined> {
+  try {
+    const resp = await api.delete("/leaves?ids=" + leaves);
 
     return resp.data as any;
   } catch (error) {

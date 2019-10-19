@@ -37,19 +37,81 @@
       <v-tab-item>
         <v-app id="inspire">
           <v-data-table
+            v-model="selected"
             :fixed-header="fixedHeader"
             :headers="headers"
-            :items="leavesData"
+            :items="finalGrouping"
             :sort-desc="[false, true]"
             :event-color="date => (date[9] % 2 ? 'red' : 'yellow')"
             :events="functionEvents"
-            multi-sort
+            show-expand
+            item-key="startDate"
             class="elevation-1"
+            show-select
+            :rowVal="rowVal"
+            @item-selected="parentCheckboxChanged"
           >
-            <template v-slot:item.action="{ item }">
+            <!-- <template v-slot:item.action="{ item }">
               <v-icon small @click="deleteItem(item)">delete</v-icon>
+            </template>-->
+            <template
+              v-slot:expanded-item="{ item }"
+              :colspan="headers.length"
+              style="margin-bottom: -30px"
+            >
+              <!-- <tr v-for="singleItem in item.leaveRange">
+              <td>-->
+              <td></td>
+              <td :colspan="headers.length">
+                <v-checkbox
+                  v-for="singleItem in item.leaveRange"
+                  v-model="individualItem"
+                  :value="singleItem.id"
+                  :label="singleItem.date"
+                  dense
+                  style="margin-bottom: -25px"
+                  @change="childChanged(item)"
+                />
+              </td>
+              <!-- </td>
+                <td>{{singleItem.date}}</td>
+                <td>{{singleItem.type}}</td>
+              </tr>-->
             </template>
           </v-data-table>
+
+          <!-- <v-simple-table fixed-header>
+            <template v-slot:default>
+              <thead>
+                <tr>
+                  <th class="text-left"></th>
+                  <th class="text-left">Start Date</th>
+                  <th class="text-left">End Date</th>
+                  <th class="text-left">Type</th>
+                  <th class="text-left"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in finalGrouping" :key="item.startDate">
+                  <td>
+                    <v-checkbox v-model="checkboxVal" :value="item.leaveRange"></v-checkbox>
+                  </td>
+                  <td>{{ item.startDate }}</td>
+                  <td>{{ item.endDate }}</td>
+                  <td>{{ item.type[0] }}</td>
+                  <td>
+                    <tr>{{ item.leaveRange[0].date }}</tr>
+                    <tr>{{ item.leaveRange[0].date }}</tr>
+                    <tr>{{ item.leaveRange[0].date }}</tr>
+                    <tr>{{ item.leaveRange[0].date }}</tr>
+                  </td>
+                </tr>
+              </tbody>
+            </template>
+          </v-simple-table>-->
+          <v-col cols="12" md="3">
+            <v-btn color="error" @click.prevent="deleteLeaves()">Delete</v-btn>
+          </v-col>
         </v-app>
       </v-tab-item>
     </v-tabs>
@@ -67,7 +129,7 @@ import {
   RangeLeaves,
   CombinedLeave,
   LeaveType,
-  SubmittedLeave
+  Leaves
 } from "@/store/models/models";
 import { Computed } from "vuex";
 import LeaveUtils from "@/components/commons/LeaveUtil";
@@ -85,6 +147,8 @@ export default class ApplyLeave extends Vue {
   publicHolidaysDates: any[] = [];
   leavesTakenDates: any[] = [];
 
+  finalGrouping: RangeLeaves[] = [];
+  checkboxVal: any[] = [];
   userObj = user.userObject;
 
   completeLeaveList: string[] = [];
@@ -92,16 +156,15 @@ export default class ApplyLeave extends Vue {
   fixedHeader = false;
   notitle = true;
   headers = [
-    {
-      text: "ID",
-      align: "left",
-      value: "id",
-      width: "1%"
-    },
-    { text: "Type", align: "left", value: "type", width: "1%" },
-    { text: "Date", align: "left", value: "date", width: "1%" },
-    { text: "Action", align: "left", value: "action", width: "1%" }
+    { text: "Start date", align: "left", value: "startDate" },
+    { text: "End date", align: "left", value: "endDate" },
+    { text: "Type", align: "left", value: "type" },
+    { text: "", align: "left", value: "data-table-expand" }
   ];
+
+  selected = [];
+  rowVal = [];
+  individualItem: any[] = [];
 
   beforeCreate() {
     leaves.getPublicHoliday().then(publicholidays => {
@@ -164,37 +227,79 @@ export default class ApplyLeave extends Vue {
     holidays: PublicHolidayResponse[] | null
   ) {
     let combinedData: CombinedLeave[] = [];
+    let sickDays: CombinedLeave[] = [];
+    let vacationDays: CombinedLeave[] = [];
 
     leaves.forEach(data => {
-      combinedData.push({
-        date: data.date,
-        type: data.type
-      });
+      if (data.type === "vacation") {
+        vacationDays.push({
+          id: data.id,
+          date: data.date,
+          type: data.type
+        });
+      } else if (data.type === "sick") {
+        sickDays.push({ id: data.id, date: data.date, type: data.type });
+      }
+      // combinedData.push({
+      //   date: data.date,
+      //   type: data.type
+      // });
     });
+
+    console.log("Sick days", sickDays);
+    console.log("vacation days", vacationDays);
 
     console.log("public holidays");
     if (holidays) {
       holidays.forEach(data => {
-        combinedData.push({
+        sickDays.push({
+          id: -1,
           date: data.date,
-          type: "PublicHoliday" + data.name
+          type: "PublicHoliday"
+        });
+
+        vacationDays.push({
+          id: -1,
+          date: data.date,
+          type: "PublicHoliday"
         });
       });
     }
 
-    console.log("Combined DAta", combinedData);
+    // console.log("Combined DAta", combinedData);
 
-    combinedData = this.sortCombinedData(combinedData);
-    console.log("Combined DAta after sort", combinedData);
-    combinedData.concat(this.populateWeekends(combinedData));
+    // combinedData = this.sortCombinedData(combinedData);
 
-    this.completeLeaveList = combinedData.map(data => data.date);
+    this.sortCombinedData(sickDays);
+    this.sortCombinedData(vacationDays);
 
-    let groupedLeaves = this.preparedRangedData(combinedData);
-    // console.log("Combined DAta getting weekends", combinedData);
+    console.log("Combined Data after sort", combinedData);
+    sickDays.concat(this.populateWeekends(sickDays));
+    vacationDays.concat(this.populateWeekends(vacationDays));
+
+    this.completeLeaveList = sickDays.map(data => data.date);
+    this.completeLeaveList.concat(vacationDays.map(data => data.date));
+
+    let groupedSickLeaves = LeaveUtils.preparedRangedData(
+      sickDays,
+      user.userObject ? user.userObject.id : -1
+    );
+    let groupedVacationLeaves = LeaveUtils.preparedRangedData(
+      vacationDays,
+      user.userObject ? user.userObject.id : -1
+    );
+
+    console.log("Combined DAta getting weekends", combinedData);
     //  this.preparedRangedData(combinedData);
-    console.log("Range data", groupedLeaves);
-    // LeaveUtils.cleanupVacationLeaves(groupedLeaves);
+    console.log("Range data groupedSickLeaves", groupedSickLeaves);
+    console.log("Range data groupedVacationLeaves", groupedVacationLeaves);
+
+    groupedSickLeaves = LeaveUtils.cleanupVacationLeaves(groupedSickLeaves);
+    groupedVacationLeaves = LeaveUtils.cleanupVacationLeaves(
+      groupedVacationLeaves
+    );
+
+    this.finalGrouping = groupedSickLeaves.concat(groupedVacationLeaves);
   }
 
   sortCombinedData(combinedData: CombinedLeave[]): CombinedLeave[] {
@@ -215,6 +320,7 @@ export default class ApplyLeave extends Vue {
       let momentSaturdayDay = startDate.clone();
       while (momentSaturdayDay.day(13).isBefore(endData)) {
         combinedData.push({
+          id: -1,
           date: momentSaturdayDay.clone().format("YYYY-MM-DD"),
           type: "Weekend"
         });
@@ -223,6 +329,7 @@ export default class ApplyLeave extends Vue {
 
       while (momentSundayDay.day(7).isBefore(endData)) {
         combinedData.push({
+          id: -1,
           date: momentSundayDay.clone().format("YYYY-MM-DD"),
           type: "Weekend"
         });
@@ -254,6 +361,7 @@ export default class ApplyLeave extends Vue {
 
         let previousSaturday = firstSunday.subtract(1, "days");
         combinedData.push({
+          id: -1,
           date: previousSaturday.clone().format("YYYY-MM-DD"),
           type: "Weekend"
         });
@@ -262,64 +370,6 @@ export default class ApplyLeave extends Vue {
         return this.sortCombinedData(combinedData);
       }
     } else return [];
-  }
-
-  preparedRangedData(combinedData: CombinedLeave[]): RangeLeaves[] {
-    let groupedLeaves: RangeLeaves[] = [];
-
-    let leaveType: string[] = [];
-
-    if (combinedData.length === 0) {
-      return [];
-    }
-    if (combinedData.length === 1) {
-      groupedLeaves.push({
-        startDate: combinedData[0].date,
-        endDate: combinedData[0].date,
-        type: [combinedData[0].type]
-      });
-    } else {
-      let startindexCounter = 0;
-      for (let index = 0; index < combinedData.length - 1; index++) {
-        if (
-          combinedData[startindexCounter].type === "vacation" ||
-          combinedData[startindexCounter].type === "sick"
-        ) {
-          let tempStartDate = moment(combinedData[index].date);
-          let tempEndDate = moment(combinedData[index + 1].date);
-
-          if (tempEndDate.diff(tempStartDate, "days") === 1) {
-            leaveType.push(combinedData[index].type);
-            if (index === combinedData.length - 2) {
-              let rangeLeave = new RangeLeaves();
-              rangeLeave.startDate = combinedData[startindexCounter].date;
-              rangeLeave.endDate = combinedData[index + 1].date;
-              leaveType.push(combinedData[index + 1].type);
-              rangeLeave.type = leaveType;
-
-              groupedLeaves.push(rangeLeave);
-
-              leaveType = [];
-              startindexCounter = index + 1;
-            } else {
-              continue;
-            }
-          } else {
-            if (combinedData[index].type === "vacation") {
-              let rangeLeave = new RangeLeaves();
-              leaveType.push(combinedData[index].type);
-              rangeLeave.startDate = combinedData[startindexCounter].date;
-              rangeLeave.endDate = combinedData[index].date;
-              rangeLeave.type = leaveType;
-              groupedLeaves.push(rangeLeave);
-              leaveType = [];
-              startindexCounter = index + 1;
-            }
-          }
-        }
-      }
-    }
-    return groupedLeaves;
   }
 
   splitSickLeavesAndVacation(combinedData: CombinedLeave[]) {
@@ -340,10 +390,14 @@ export default class ApplyLeave extends Vue {
       }
     });
 
-    let sickLeave: RangeLeaves[] = this.preparedRangedData(sickTest);
+    let sickLeave: RangeLeaves[] = LeaveUtils.preparedRangedData(
+      sickTest,
+      user.userObject ? user.userObject.id : -1
+    );
 
-    let vacationWithWeekend: RangeLeaves[] = this.preparedRangedData(
-      vacationTest
+    let vacationWithWeekend: RangeLeaves[] = LeaveUtils.preparedRangedData(
+      vacationTest,
+      user.userObject ? user.userObject.id : -1
     );
 
     return sickLeave.concat(vacationWithWeekend);
@@ -361,7 +415,7 @@ export default class ApplyLeave extends Vue {
     let leaveType = this.leaveType;
     let leaveRange = this.dates;
 
-    let appliedLeaveDates: SubmittedLeave[] = [];
+    let appliedLeaveDates: Leaves[] = [];
     let endAppliedDate = null;
 
     let startAppliedDate = moment(leaveRange[0]);
@@ -384,8 +438,9 @@ export default class ApplyLeave extends Vue {
 
         if (this.completeLeaveList.indexOf(tempDate) === -1) {
           appliedLeaveDates.push({
+            userId: user.userObject ? user.userObject.id : -1,
             date: tempDate,
-            type: leaveType
+            type: leaveType.toLowerCase()
           });
         }
         startAppliedDate.add(1, "days");
@@ -393,12 +448,53 @@ export default class ApplyLeave extends Vue {
 
       if (user.userObject) {
         console.log("appliedLeaveDates", appliedLeaveDates);
+        leaves.applySubmittedLeave(appliedLeaveDates);
       }
     } else {
-      let submittedLeave = {} as SubmittedLeave;
+      let submittedLeave = {} as Leaves;
+
+      let leavesArray: Leaves[] = [];
+
+      submittedLeave.userId = user.userObject ? user.userObject.id : -1;
       submittedLeave.date = leaveRange[0];
       submittedLeave.type = leaveType.toLowerCase();
+
+      leavesArray.push(submittedLeave);
+
+      leaves.applySubmittedLeave(leavesArray);
     }
+  }
+  parentCheckboxChanged(val: any) {
+    if (val.value) {
+      val.item.leaveRange.map((data: any) => {
+        if (this.individualItem.indexOf(data.id) === -1)
+          this.individualItem.push(data.id);
+      });
+      // this.individualItem.push(
+      //   val.item.leaveRange.map(data => {
+      //     data.id;
+      //   })
+      // );
+    } else {
+      val.item.leaveRange.map((data: any) => {
+        let index = this.individualItem.indexOf(data.id);
+
+        if (index > -1) {
+          this.individualItem.splice(index, 1);
+        }
+      });
+    }
+    console.log(val);
+  }
+
+  childChanged(val: any) {
+    let index = this.selected.indexOf(val);
+    if (index > -1) {
+      this.selected.splice(index, 1);
+    }
+  }
+  deleteLeaves() {
+    leaves.deleteLeaves(this.individualItem.toString());
   }
 }
 </script>

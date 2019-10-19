@@ -1,7 +1,9 @@
 import {
   PublicHolidayResponse,
   PublicHolidayGrouped,
-  RangeLeaves
+  RangeLeaves,
+  CombinedLeave,
+  AppliedLeavesResponse
 } from "@/store/models/models";
 import moment from "moment";
 
@@ -58,34 +60,160 @@ export default class LeaveUtils {
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   }
 
+  static preparedRangedData(
+    combinedData: CombinedLeave[],
+    id: number
+  ): RangeLeaves[] {
+    let groupedLeaves: RangeLeaves[] = [];
+
+    let leaveType: string[] = [];
+
+    if (combinedData.length === 0) {
+      return [];
+    }
+    if (combinedData.length === 1) {
+      let leaveRange: AppliedLeavesResponse[] = [];
+      leaveRange.push({
+        id: combinedData[0].id,
+        date: combinedData[0].date,
+        type: combinedData[0].type,
+        user_id: id
+      });
+      groupedLeaves.push({
+        startDate: combinedData[0].date,
+        endDate: combinedData[0].date,
+        type: [combinedData[0].type],
+        leaveRange: leaveRange
+      });
+    } else {
+      let startindexCounter = 0;
+      let allLeaves: AppliedLeavesResponse[] = [];
+
+      for (let index = 0; index < combinedData.length - 1; index++) {
+        let tempStartDate = moment(combinedData[index].date);
+        let tempEndDate = moment(combinedData[index + 1].date);
+
+        if (tempEndDate.diff(tempStartDate, "days") === 1) {
+          leaveType.push(combinedData[index].type);
+          if (combinedData[index].id > -1) {
+            allLeaves.push({
+              id: combinedData[index].id,
+              date: combinedData[index].date,
+              type: combinedData[index].type,
+              user_id: id
+            });
+          }
+
+          if (index === combinedData.length - 2) {
+            let rangeLeave = new RangeLeaves();
+
+            rangeLeave.startDate = combinedData[startindexCounter].date;
+            rangeLeave.endDate = combinedData[index + 1].date;
+            leaveType.push(combinedData[index + 1].type);
+            rangeLeave.type = leaveType;
+            rangeLeave.leaveRange = allLeaves;
+            groupedLeaves.push(rangeLeave);
+
+            leaveType = [];
+            allLeaves = [];
+            startindexCounter = index + 1;
+          } else {
+            continue;
+          }
+        } else {
+          // if (
+          //   combinedData[index].type === "vacation" ||
+          //   combinedData[startindexCounter].type === "sick"
+          // ) {
+          let rangeLeave = new RangeLeaves();
+
+          leaveType.push(combinedData[index].type);
+          if (combinedData[index].id > -1) {
+            allLeaves.push({
+              id: combinedData[index].id,
+              date: combinedData[index].date,
+              type: combinedData[index].type,
+              user_id: id
+            });
+          }
+          rangeLeave.startDate = combinedData[startindexCounter].date;
+          rangeLeave.endDate = combinedData[index].date;
+          rangeLeave.type = leaveType;
+          rangeLeave.leaveRange = allLeaves;
+          groupedLeaves.push(rangeLeave);
+          leaveType = [];
+          allLeaves = [];
+          startindexCounter = index + 1;
+        }
+      }
+      // }
+      // }
+    }
+    return groupedLeaves;
+  }
+
   static cleanupVacationLeaves(groupedLeaves: RangeLeaves[]) {
     let finalGroupedData: RangeLeaves[] = [];
-    let rangedData = new RangeLeaves();
     groupedLeaves.forEach(leaveData => {
-      if (leaveData.type.indexOf("sick") > 0) {
-        finalGroupedData.push(leaveData);
-      } else if (leaveData.type.indexOf("vacation") > 0) {
-        let startDate = moment(leaveData.startDate);
-        let endDate = moment(leaveData.endDate);
+      let rangedData = new RangeLeaves();
+
+      if (leaveData.type.indexOf("sick") > -1) {
+        let startDate = moment(leaveData.startDate).clone();
+        let endDate = moment(leaveData.endDate).clone();
+
+        let startIndex = 0;
+        let endIndex = leaveData.type.length - 1;
+        // while (startDate.clone().isSameOrBefore(endDate)) {
+        //   startDate = moment(leaveData.startDate)
+        //     .clone()
+        //     .add(1, "days")
+        //     .clone();
+        //   startIndex++;
+        // }
+        while (leaveData.type[startIndex] !== "sick") {
+          startDate.clone().add(1, "days");
+          startIndex++;
+        }
+
+        while (leaveData.type[endIndex] !== "sick") {
+          endDate = endDate
+            .clone()
+            .subtract(1, "days")
+            .clone();
+          endIndex--;
+        }
+        rangedData.startDate = startDate.clone().format("YYYY-MM-DD");
+        rangedData.endDate = endDate.clone().format("YYYY-MM-DD");
+        rangedData.type[0] = "sick";
+        rangedData.leaveRange = leaveData.leaveRange;
+        finalGroupedData.push(rangedData);
+
+        // finalGroupedData.push(leaveData);
+      } else if (leaveData.type.indexOf("vacation") > -1) {
+        let startDate = moment(leaveData.startDate).clone();
+        let endDate = moment(leaveData.endDate).clone();
 
         let startIndex = 0;
         let endIndex = leaveData.type.length - 1;
         while (leaveData.type[startIndex] !== "vacation") {
-          startDate = moment(leaveData.startDate)
+          startDate = startDate
             .clone()
-            .add(1, "days");
+            .add(1, "days")
+            .clone();
           startIndex++;
         }
 
         while (leaveData.type[endIndex] !== "vacation") {
-          endDate = moment(leaveData.startDate)
+          endDate = endDate
             .clone()
-            .subtract(1, "days");
+            .subtract(1, "days")
+            .clone();
           endIndex--;
         }
         rangedData.startDate = startDate.clone().format("YYYY-MM-DD");
-        rangedData.startDate = endDate.clone().format("YYYY-MM-DD");
-        rangedData.startDate = "vacation";
+        rangedData.endDate = endDate.clone().format("YYYY-MM-DD");
+        rangedData.type[0] = "vacation";
+        rangedData.leaveRange = leaveData.leaveRange;
 
         finalGroupedData.push(rangedData);
       }
