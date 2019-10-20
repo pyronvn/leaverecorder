@@ -1,40 +1,74 @@
 <template>
-  <v-app id="inspire">
+  <v-app id="applyleave">
     <div v-if="showSnackbar">
       <Snackbar :color="color" :text="text"></Snackbar>
     </div>
-    <v-tabs v-model="tab" background-color="#1e88e5" dark>
+    <v-tabs v-model="tab" background-color="#1e88e5" dark lazy>
       <v-tab>Apply Leave</v-tab>
       <v-tab>View History</v-tab>
 
-      <v-tab-item>
-        <v-form>
-          <v-card flat tile>
-            <v-container fluid>
-              <v-row align="center">
-                <v-col class="d-flex" cols="12" md="2">
-                  <v-select v-model="leaveType" :items="items" label="Leave Type"></v-select>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col cols="12" md="4">
-                  <v-date-picker v-model="dates" range :no-title="notitle" :events="functionEvents"></v-date-picker>
-                </v-col>
-              </v-row>
+      <v-tab-item lazy>
+        <div>
+          <v-form>
+            <v-card flat tile>
+              <v-container fluid>
+                <v-row align="center">
+                  <v-col class="d-flex" cols="12" md="2">
+                    <v-select v-model="leaveType" :items="items" label="Leave Type"></v-select>
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col cols="12" md="4">
+                    <v-card flat>
+                      <v-list-item three-line>
+                        <v-list-item-content>
+                          <v-row>
+                            <v-col>
+                              <v-date-picker
+                                range
+                                :min="new Date().toISOString().substr(0, 10)"
+                                :max="lastDateOfThisYear"
+                                :no-title="notitle"
+                                v-model="dates"
+                                :events="functionEvents"
+                                :allowed-dates="holidaysDates"
+                              ></v-date-picker>
+                            </v-col>
+                          </v-row>
+                          <v-row>
+                            <v-col align="center" justify="center">
+                              <ul class="legend">
+                                <li>
+                                  <span class="publicHolidays"></span>
+                                  Public Holiday
+                                </li>
+                                <li>
+                                  <span class="leaves"></span>
+                                  Leaves
+                                </li>
+                              </ul>
+                            </v-col>
+                          </v-row>
+                        </v-list-item-content>
+                      </v-list-item>
+                    </v-card>
+                  </v-col>
+                </v-row>
 
-              <v-row>
-                <v-col cols="12" md="4">
-                  <v-btn
-                    depressed
-                    color="primary"
-                    @click.prevent="applyLeave()"
-                    :disabled="isFormValid() && userObj !== null"
-                  >Apply Leave</v-btn>
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-card>
-        </v-form>
+                <v-row>
+                  <v-col cols="12" md="4">
+                    <v-btn
+                      depressed
+                      color="primary"
+                      @click.prevent="applyLeave()"
+                      :disabled="isFormInValid() && userObj !== null"
+                    >Apply Leave</v-btn>
+                  </v-col>
+                </v-row>
+              </v-container>
+            </v-card>
+          </v-form>
+        </div>
       </v-tab-item>
 
       <v-tab-item>
@@ -46,7 +80,6 @@
             :items="finalGrouping"
             :sort-desc="[false, true]"
             :event-color="date => (date[9] % 2 ? 'red' : 'yellow')"
-            :events="functionEvents"
             show-expand
             item-key="startDate"
             class="elevation-1"
@@ -67,6 +100,7 @@
               <td></td>
               <td :colspan="headers.length">
                 <v-checkbox
+                  :disabled="disablePreviousDay(singleItem.date)"
                   v-for="singleItem in item.leaveRange"
                   v-model="individualItem"
                   :value="singleItem.id"
@@ -113,7 +147,11 @@
             </template>
           </v-simple-table>-->
           <v-col cols="12" md="3">
-            <v-btn color="error" @click.prevent="deleteLeaves()">Delete</v-btn>
+            <v-btn
+              color="error"
+              :disabled="!individualItem.length > 0"
+              @click.prevent="deleteLeaves()"
+            >Delete</v-btn>
           </v-col>
         </v-app>
       </v-tab-item>
@@ -145,8 +183,10 @@ import Snackbar from "@/components/commons/Snackbar.vue";
 })
 export default class ApplyLeave extends Vue {
   dateformat = "yyyy-MM-dd";
-  max = "2020-12-31";
-  min = "";
+  // lastDateOfThisYear = moment(
+  //   new Date(new Date().getFullYear(), 11, 31).toString()
+  // ).format("YYYY-MM-DD");
+  lastDateOfThisYear = new Date().getFullYear() + "-12-31";
   tab = null;
   dates = [];
   leaveType = "";
@@ -175,56 +215,68 @@ export default class ApplyLeave extends Vue {
   individualItem: any[] = [];
 
   showSnackbar = false;
+  color = "";
+  text = "";
 
   beforeCreate() {}
   created() {
+    console.log("lastDateOfThisYear", this.lastDateOfThisYear);
+
     this.initialisePage();
   }
 
   initialisePage() {
+    this.showSnackbar = false;
     leaves
       .getAppliedLeaves(user.userObject ? user.userObject.id : -1)
       .then(resp => {
         this.completeLeaveList = [];
-        leaves.getPublicHoliday().then(publicholidays => {
-          if (publicholidays) {
-            LeaveUtils.groupPublicHolidays(publicholidays);
-            console.log("Before create", publicholidays);
-            publicholidays.forEach((val: any) => {
-              console.log("Value", val.date);
+        leaves.getPublicHoliday().then(
+          publicholidays => {
+            if (publicholidays) {
+              LeaveUtils.groupPublicHolidays(publicholidays);
+              console.log("Before create", publicholidays);
+              publicholidays.forEach((val: any) => {
+                console.log("Value", val.date);
 
-              this.publicHolidaysDates.push(val.date);
-            });
+                this.publicHolidaysDates.push(val.date);
+              });
+            }
+            console.log("publicHolidaysDates", this.publicHolidaysDates);
+
+            this.finalGrouping = LeaveUtils.combineLeavesAndHoliday(
+              leaves.leavesSummary,
+              leaves.publicHolidaysList
+            );
+
+            this.completeLeaveList = LeaveUtils.completeLeaveList;
+
+            this.updateCalendar();
+          },
+          (error: any) => {
+            this.color = "error";
+            this.text = "Something went wrong";
+            this.showSnackbar = true;
           }
-          console.log("publicHolidaysDates", this.publicHolidaysDates);
-
-          this.finalGrouping = LeaveUtils.combineLeavesAndHoliday(
-            leaves.leavesSummary,
-            leaves.publicHolidaysList
-          );
-
-          this.completeLeaveList = LeaveUtils.completeLeaveList;
-
-          this.updateCalendar();
-        });
+        );
       });
   }
 
   updateCalendar() {
+    this.leavesData = [];
+    this.leavesTakenDates = [];
     console.log("Leaves summary", leaves.leavesSummary);
     this.leavesData = leaves.leavesSummary;
 
     this.leavesData.forEach(data => {
       this.leavesTakenDates.push(data.date);
     });
-
-    this.min = moment(new Date()).format(this.dateformat);
   }
 
   holidaysDates(val: any) {
-    // console.log("Allowed", val);
+    console.log("Allowed", val);
 
-    if (this.completeLeaveList.indexOf(val) > -1) {
+    if (LeaveUtils.completeLeaveList.indexOf(val) > -1) {
       return 0;
     } else {
       return 1;
@@ -275,7 +327,7 @@ export default class ApplyLeave extends Vue {
     return sickLeave.concat(vacationWithWeekend);
   }
 
-  isFormValid() {
+  isFormInValid() {
     if (this.leaveType && this.dates && this.dates.length > 0) {
       return false;
     }
@@ -284,6 +336,8 @@ export default class ApplyLeave extends Vue {
 
   applyLeave() {
     console.log("completeLeaveList", this.completeLeaveList);
+    this.showSnackbar = false;
+
     let leaveType = this.leaveType;
     let leaveRange = this.dates;
 
@@ -317,44 +371,50 @@ export default class ApplyLeave extends Vue {
         }
         startAppliedDate.add(1, "days");
       }
-
-      if (user.userObject) {
-        console.log("appliedLeaveDates", appliedLeaveDates);
-        leaves.applySubmittedLeave(appliedLeaveDates).then(
-          (resp: any) => {
-            this.leaveType = "";
-            this.dates = [];
-            this.initialisePage();
-          },
-          (error: any) => {}
-        );
-      }
     } else {
       let submittedLeave = {} as Leaves;
-
-      let leavesArray: Leaves[] = [];
+      this.showSnackbar = false;
 
       submittedLeave.userId = user.userObject ? user.userObject.id : -1;
       submittedLeave.date = leaveRange[0];
       submittedLeave.type = leaveType.toLowerCase();
 
-      leavesArray.push(submittedLeave);
+      appliedLeaveDates.push(submittedLeave);
+    }
 
-      leaves.applySubmittedLeave(leavesArray).then(
-        (resp: any) => {
-          this.leaveType = "";
-          this.dates = [];
-          this.initialisePage();
-        },
-        (error: any) => {}
-      );
+    if (this.verifyLeaveCount(leaveType, appliedLeaveDates)) {
+      if (user.userObject) {
+        console.log("appliedLeaveDates", appliedLeaveDates);
+        leaves.applySubmittedLeave(appliedLeaveDates).then(
+          (resp: any) => {
+            this.initialisePage();
+            this.color = "green";
+            this.text = "Leave applied successfully!";
+            this.showSnackbar = true;
+
+            this.leaveType = "";
+            this.dates = [];
+          },
+          (error: any) => {
+            this.color = "error";
+            this.text = "Leave applied successfully!";
+            this.showSnackbar = true;
+          }
+        );
+      }
+    } else {
+      this.color = "error";
+      this.text = "You dont jave sufficient leaves";
+      this.showSnackbar = true;
     }
   }
   parentCheckboxChanged(val: any) {
     if (val.value) {
-      val.item.leaveRange.map((data: any) => {
-        if (this.individualItem.indexOf(data.id) === -1)
-          this.individualItem.push(data.id);
+      val.item.leaveRange.map((data: AppliedLeavesResponse) => {
+        if (!this.disablePreviousDay(data.date)) {
+          if (this.individualItem.indexOf(data.id) === -1)
+            this.individualItem.push(data.id);
+        }
       });
       // this.individualItem.push(
       //   val.item.leaveRange.map(data => {
@@ -380,9 +440,70 @@ export default class ApplyLeave extends Vue {
     }
   }
   deleteLeaves() {
-    leaves.deleteLeaves(this.individualItem.toString());
+    this.showSnackbar = false;
+    leaves.deleteLeaves(this.individualItem.toString()).then(
+      resp => {
+        this.initialisePage();
+        this.text = "Leaves delete successfully!";
+        this.color = "green";
+        this.showSnackbar = true;
+      },
+      (error: any) => {
+        this.text = "Some thing went wrong";
+        this.color = "error";
+        this.showSnackbar = true;
+      }
+    );
+  }
+
+  disablePreviousDay(date: string) {
+    if (moment(date).isBefore(moment())) {
+      return true;
+    } else return false;
+  }
+
+  verifyLeaveCount(leaveType: string, appliedLeaveDates: any[]) {
+    if (user.userObject) {
+      if (leaveType.toLowerCase() === LeaveType.SICK) {
+        if (appliedLeaveDates.length > user.userObject.sickdays) {
+          return false;
+        }
+      }
+
+      if (leaveType.toLowerCase() === LeaveType.VACATION) {
+        if (appliedLeaveDates.length > user.userObject.holidays) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    return false;
   }
 }
 </script>
 
-<style></style>
+<style scoped>
+.legend {
+  list-style: none;
+}
+.legend li {
+  float: left;
+  margin-right: 10px;
+}
+.legend span {
+  border: 1px solid #ccc;
+  float: left;
+  width: 12px;
+  height: 12px;
+  margin: 2px;
+}
+/* your colors */
+.legend .publicHolidays {
+  background-color: #2196f3;
+}
+.legend .leaves {
+  background-color: #4caf50;
+}
+</style>

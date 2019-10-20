@@ -49,7 +49,7 @@
         <span class="hidden-sm-and-down">Leave Recorder</span>
       </v-toolbar-title>
 
-      <div v-if="loggedInUserName" class="field created-at">{{ datenow }}</div>
+      <!-- <div v-if="loggedInUserName" class="field created-at">{{ datenow }}</div> -->
 
       <div class="flex-grow-1"></div>
       <router-link to="/">
@@ -64,7 +64,19 @@
         </v-avatar>
       </v-btn>-->
 
-      <div v-if="loggedInUserName">Welcome {{ loggedInUserName }}</div>
+      <!-- <div v-if="loggedInUserName">Welcome {{ loggedInUserName }}</div> -->
+      <div v-if="loggedInUserName">
+        <v-menu offset-y>
+          <template v-slot:activator="{ on }">
+            <v-btn color="primary" depressed dark v-on="on">Welcome {{ loggedInUserName }}</v-btn>
+          </template>
+          <v-list>
+            <v-list-item v-for="(item, index) in dropdown" :key="index" @click>
+              <v-list-item-title @click="signout()">{{ item }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
     </v-app-bar>
     <v-content>
       <v-container fluid>
@@ -89,10 +101,8 @@ import moment from "moment";
   components: { Snackbar }
 })
 export default class Navbar extends Vue {
-  datenow = "";
-  clickedMethod(s: any) {
-    console.log("Clickeddd");
-  }
+  dropdown = ["Logoff"];
+
   drawer = null;
   dialog = false;
 
@@ -113,6 +123,14 @@ export default class Navbar extends Vue {
   }
   createdAtDisplay() {
     return moment().format("h:mm A");
+  }
+
+  signout() {
+    console.log("Signouttttt");
+
+    user.logout().then(() => {
+      this.$router.push("/login");
+    });
   }
 }
 </script>

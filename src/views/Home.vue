@@ -50,7 +50,6 @@ import Snackbar from "@/components/commons/Snackbar.vue";
 export default class Home extends Vue {
   piechartVacationLeavesTitle = "Vacation Leaves";
   piechartSickLeavesTitle = "Sick Leaves";
-  showSnackbar = false;
 
   simpleTableHolidaysTitle = "Holidays";
   simpleTableSickTitle = "Leaves";
@@ -68,6 +67,10 @@ export default class Home extends Vue {
 
   publicHolidaysRanged: PublicHolidayResponse[] = [];
   leaveRanged: RangeLeaves[] = [];
+
+  showSnackbar = false;
+  color = "error";
+  text = "";
   created() {
     // console.log("Setting leaves", leaves.getAppliedLeaves(user.userObject.id));
     if (user.userObject) {
@@ -75,27 +78,37 @@ export default class Home extends Vue {
         let leaveData = this.calculateLeaveData(appliedLeaves);
         if (leaveData) {
           this.calculateLeaveCountForPiechart(leaveData[0], leaveData[1]);
+
+          leaves.getPublicHoliday().then(
+            (publicholidays: any) => {
+              if (publicholidays) {
+                let resp: any[] = LeaveUtils.groupPublicHolidays(
+                  publicholidays
+                );
+                console.log("resp", resp);
+
+                console.log(
+                  "this.publicHolidaysRanged",
+                  this.publicHolidaysRanged
+                );
+
+                this.publicHolidaysRanged = resp || [];
+
+                this.leaveRanged = LeaveUtils.combineLeavesAndHoliday(
+                  leaves.leavesSummary,
+                  leaves.publicHolidaysList
+                );
+              }
+            },
+            (error: any) => {
+              this.text = error;
+              this.showSnackbar = true;
+              console.error(error.toString());
+            }
+          );
         }
       }),
-        (error: any) => {
-          
-        };
-
-      leaves.getPublicHoliday().then(publicholidays => {
-        if (publicholidays) {
-          let resp: any[] = LeaveUtils.groupPublicHolidays(publicholidays);
-          console.log("resp", resp);
-
-          console.log("this.publicHolidaysRanged", this.publicHolidaysRanged);
-
-          this.publicHolidaysRanged = resp || [];
-        }
-      });
-
-      this.leaveRanged = LeaveUtils.combineLeavesAndHoliday(
-        leaves.leavesSummary,
-        leaves.publicHolidaysList
-      );
+        (error: any) => {};
     }
   }
 

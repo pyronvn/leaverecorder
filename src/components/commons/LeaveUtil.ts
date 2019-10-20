@@ -353,34 +353,37 @@ export default class LeaveUtils {
   }
 
   static populateWeekends(combinedData: CombinedLeave[]): CombinedLeave[] {
-    let startDate = moment(combinedData[0].date);
-    let startDate2 = moment(combinedData[0].date);
-    let endData = moment(combinedData[combinedData.length - 1].date);
+    if (combinedData.length > 0) {
+      let startDate = moment(combinedData[0].date);
+      let startDate2 = moment(combinedData[0].date);
+      let endData = moment(combinedData[combinedData.length - 1].date);
 
-    if (endData.diff(startDate, "days") > 1) {
-      let momentSaturdayDay = startDate.clone();
-      while (momentSaturdayDay.day(13).isBefore(endData)) {
-        combinedData.push({
-          id: -1,
-          date: momentSaturdayDay.clone().format("YYYY-MM-DD"),
-          type: "Weekend"
-        });
-      }
-      let momentSundayDay = startDate2.clone();
+      if (endData.diff(startDate, "days") > 1) {
+        let momentSaturdayDay = startDate.clone();
+        while (momentSaturdayDay.day(13).isBefore(endData)) {
+          combinedData.push({
+            id: -1,
+            date: momentSaturdayDay.clone().format("YYYY-MM-DD"),
+            type: "Weekend"
+          });
+        }
+        let momentSundayDay = startDate2.clone();
 
-      while (momentSundayDay.day(7).isBefore(endData)) {
-        combinedData.push({
-          id: -1,
-          date: momentSundayDay.clone().format("YYYY-MM-DD"),
-          type: "Weekend"
-        });
+        while (momentSundayDay.day(7).isBefore(endData)) {
+          combinedData.push({
+            id: -1,
+            date: momentSundayDay.clone().format("YYYY-MM-DD"),
+            type: "Weekend"
+          });
+        }
       }
+      console.log("Before first saturday", combinedData);
+
+      LeaveUtils.sortCombinedData(combinedData);
+      LeaveUtils.getFirstSaturday(combinedData);
+
+      return combinedData;
     }
-    console.log("Before first saturday", combinedData);
-
-    LeaveUtils.sortCombinedData(combinedData);
-    LeaveUtils.getFirstSaturday(combinedData);
-
-    return combinedData;
+    return [];
   }
 }

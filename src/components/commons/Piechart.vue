@@ -80,7 +80,7 @@ export default class Piechart extends Vue {
 }
 </script>
 
-<style>
+<style scoped>
 svg {
   height: 250px;
   width: 250px;

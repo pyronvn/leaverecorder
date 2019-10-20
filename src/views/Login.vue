@@ -8,12 +8,7 @@
         <v-container>
           <v-row align="center" justify="center">
             <v-col cols="12" md="3">
-              <v-text-field
-                v-model="userId"
-                label="User ID"
-                required
-                :rules="rule.invalidUser"
-              ></v-text-field>
+              <v-text-field v-model="userId" label="User ID" required :rules="rule.invalidUser"></v-text-field>
             </v-col>
             <v-col cols="12" md="3">
               <v-btn
@@ -21,8 +16,7 @@
                 depressed
                 color="primary"
                 :disabled="!userId || !userId.length > 0"
-                >Login</v-btn
-              >
+              >Login</v-btn>
             </v-col>
           </v-row>
         </v-container>
@@ -54,6 +48,7 @@ export default class Login extends Vue {
     invalidUser: [val => (val && val.length !== 0) || "Enter User ID"]
   };
   loginSubmit() {
+    this.showSnackbar = false;
     console.log("Login called", this.userId, user);
 
     let userSubmit = { userid: this.userId };

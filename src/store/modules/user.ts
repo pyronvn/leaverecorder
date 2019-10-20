@@ -37,6 +37,16 @@ class UsersModule extends VuexModule {
 
     return user;
   }
+
+  @Mutation
+  clearUser(user: any) {
+    this.user = null;
+  }
+
+  @Action({ commit: "clearUser" })
+  async logout() {
+    return null;
+  }
 }
 
 export default getModule(UsersModule);
