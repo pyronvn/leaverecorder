@@ -48,6 +48,9 @@
         <v-app-bar-nav-icon v-if="isUserLoggedIn()" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
         <span class="hidden-sm-and-down">Leave Recorder</span>
       </v-toolbar-title>
+
+      <div v-if="loggedInUserName" class="field created-at">{{ datenow }}</div>
+
       <div class="flex-grow-1"></div>
       <router-link to="/">
         <v-btn v-if="loggedInUserName" text>HOME</v-btn>
@@ -60,6 +63,7 @@
           ></v-img>
         </v-avatar>
       </v-btn>-->
+
       <div v-if="loggedInUserName">Welcome {{ loggedInUserName }}</div>
     </v-app-bar>
     <v-content>
@@ -79,11 +83,13 @@ import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user";
 import Snackbar from "@/components/commons/Snackbar.vue";
 import snackbarstore from "@/store/modules/snackbar-store.ts";
+import moment from "moment";
 
 @Component({
   components: { Snackbar }
 })
 export default class Navbar extends Vue {
+  datenow = "";
   clickedMethod(s: any) {
     console.log("Clickeddd");
   }
@@ -105,6 +111,8 @@ export default class Navbar extends Vue {
   get loggedInUserName() {
     return user.userName;
   }
-  getSnackBarData() {}
+  createdAtDisplay() {
+    return moment().format("h:mm A");
+  }
 }
 </script>

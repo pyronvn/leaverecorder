@@ -5,9 +5,12 @@ import {
   CombinedLeave,
   AppliedLeavesResponse
 } from "@/store/models/models";
+import user from "@/store/modules/user.ts";
+
 import moment from "moment";
 
 export default class LeaveUtils {
+  static completeLeaveList: string[] = [];
   static groupPublicHolidays(publicHoliday: PublicHolidayResponse[]) {
     let result: Map<string, any[]> = this.groupBy(
       publicHoliday,
@@ -33,6 +36,7 @@ export default class LeaveUtils {
   }
 
   static getHolidayRanges(result: Map<string, any[]>) {
+    console.log("getHolidayRanges", result);
     let publicHolidaysDateRangeList: PublicHolidayGrouped[] = [];
 
     Object.keys(result).forEach(key => {
@@ -52,6 +56,7 @@ export default class LeaveUtils {
         publicHolidaysDateRangeList.push(pulicHolidaysDateRange);
       }
     });
+    console.log("publicHolidaysDateRangeList", publicHolidaysDateRangeList);
 
     return publicHolidaysDateRangeList;
   }
@@ -220,5 +225,162 @@ export default class LeaveUtils {
     });
     console.log("Removed weekends", finalGroupedData);
     return finalGroupedData;
+  }
+
+  static sortCombinedData(combinedData: CombinedLeave[]): CombinedLeave[] {
+    combinedData.sort((date1, date2) => {
+      return date1.date > date2.date ? 1 : -1;
+    });
+
+    return combinedData;
+  }
+
+  static combineLeavesAndHoliday(
+    leaves: AppliedLeavesResponse[],
+    holidays: PublicHolidayResponse[] | null
+  ) {
+    let combinedData: CombinedLeave[] = [];
+    let sickDays: CombinedLeave[] = [];
+    let vacationDays: CombinedLeave[] = [];
+
+    leaves.forEach(data => {
+      if (data.type === "vacation") {
+        vacationDays.push({
+          id: data.id,
+          date: data.date,
+          type: data.type
+        });
+      } else if (data.type === "sick") {
+        sickDays.push({ id: data.id, date: data.date, type: data.type });
+      }
+      // combinedData.push({
+      //   date: data.date,
+      //   type: data.type
+      // });
+    });
+
+    console.log("Sick days", sickDays);
+    console.log("vacation days", vacationDays);
+
+    console.log("public holidays");
+    if (holidays) {
+      holidays.forEach(data => {
+        sickDays.push({
+          id: -1,
+          date: data.date,
+          type: "PublicHoliday"
+        });
+
+        vacationDays.push({
+          id: -1,
+          date: data.date,
+          type: "PublicHoliday"
+        });
+      });
+    }
+
+    // console.log("Combined DAta", combinedData);
+
+    // combinedData = this.sortCombinedData(combinedData);
+
+    LeaveUtils.sortCombinedData(sickDays);
+    LeaveUtils.sortCombinedData(vacationDays);
+
+    console.log("Combined Data after sort", combinedData);
+    sickDays.concat(this.populateWeekends(sickDays));
+    vacationDays.concat(this.populateWeekends(vacationDays));
+
+    console.log("this.completeLeaveList brfore", this.completeLeaveList);
+    this.completeLeaveList = sickDays.map(data => data.date);
+    console.log("this.completeLeaveList  only sick", this.completeLeaveList);
+
+    this.completeLeaveList = this.completeLeaveList.concat(
+      vacationDays.map(data => data.date)
+    );
+    console.log("this.completeLeaveList  both", this.completeLeaveList);
+
+    console.log("completeLeaveList after merge", this.completeLeaveList);
+
+    let groupedSickLeaves = LeaveUtils.preparedRangedData(
+      sickDays,
+      user.userObject ? user.userObject.id : -1
+    );
+    let groupedVacationLeaves = LeaveUtils.preparedRangedData(
+      vacationDays,
+      user.userObject ? user.userObject.id : -1
+    );
+
+    console.log("Combined DAta getting weekends", combinedData);
+    //  this.preparedRangedData(combinedData);
+    console.log("Range data groupedSickLeaves", groupedSickLeaves);
+    console.log("Range data groupedVacationLeaves", groupedVacationLeaves);
+
+    groupedSickLeaves = LeaveUtils.cleanupVacationLeaves(groupedSickLeaves);
+    groupedVacationLeaves = LeaveUtils.cleanupVacationLeaves(
+      groupedVacationLeaves
+    );
+
+    return groupedSickLeaves.concat(groupedVacationLeaves);
+  }
+
+  static getFirstSaturday(combinedData: CombinedLeave[]) {
+    if (combinedData && combinedData.length > 1) {
+      let firstDay = moment(combinedData[0].date);
+
+      let firstWeekendIndex = -1;
+
+      for (let index = 0; index <= combinedData.length - 1; index++) {
+        if (combinedData[index].type === "Weekend") {
+          firstWeekendIndex = index;
+          break;
+        }
+      }
+
+      if (firstWeekendIndex !== -1) {
+        let firstSunday = moment(combinedData[firstWeekendIndex].date);
+
+        let previousSaturday = firstSunday.subtract(1, "days");
+        combinedData.push({
+          id: -1,
+          date: previousSaturday.clone().format("YYYY-MM-DD"),
+          type: "Weekend"
+        });
+
+        console.log("After first saturday", combinedData);
+        return LeaveUtils.sortCombinedData(combinedData);
+      }
+    } else return [];
+  }
+
+  static populateWeekends(combinedData: CombinedLeave[]): CombinedLeave[] {
+    let startDate = moment(combinedData[0].date);
+    let startDate2 = moment(combinedData[0].date);
+    let endData = moment(combinedData[combinedData.length - 1].date);
+
+    if (endData.diff(startDate, "days") > 1) {
+      let momentSaturdayDay = startDate.clone();
+      while (momentSaturdayDay.day(13).isBefore(endData)) {
+        combinedData.push({
+          id: -1,
+          date: momentSaturdayDay.clone().format("YYYY-MM-DD"),
+          type: "Weekend"
+        });
+      }
+      let momentSundayDay = startDate2.clone();
+
+      while (momentSundayDay.day(7).isBefore(endData)) {
+        combinedData.push({
+          id: -1,
+          date: momentSundayDay.clone().format("YYYY-MM-DD"),
+          type: "Weekend"
+        });
+      }
+    }
+    console.log("Before first saturday", combinedData);
+
+    LeaveUtils.sortCombinedData(combinedData);
+    LeaveUtils.getFirstSaturday(combinedData);
+
+    return combinedData;
   }
 }

@@ -1,5 +1,8 @@
 <template>
   <div>
+    <div v-if="showSnackbar">
+      <Snackbar :color="color" :text="text"></Snackbar>
+    </div>
     <v-row>
       <v-col>
         <Piechart
@@ -16,23 +19,41 @@
         ></Piechart>
       </v-col>
     </v-row>
+    <v-row>
+      <v-col>
+        <SimpleTable :data="publicHolidaysRanged" :title="simpleTableHolidaysTitle"></SimpleTable>
+      </v-col>
+      <v-col>
+        <SimpleTable :data="leaveRanged" :title="simpleTableSickTitle"></SimpleTable>
+      </v-col>
+    </v-row>
   </div>
 </template>
 
 <script lang="ts">
 import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user.ts";
-import Piechart from "@/components/commons/Piechart.vue";
 import leaves from "@/store/modules/leaves-store.ts";
-import { AppliedLeavesResponse } from "@/store/models/models";
+import Piechart from "@/components/commons/Piechart.vue";
+import SimpleTable from "@/components/commons/SimpleTable.vue";
+import {
+  AppliedLeavesResponse,
+  PublicHolidayResponse,
+  RangeLeaves
+} from "@/store/models/models";
 import LeaveUtils from "@/components/commons/LeaveUtil";
+import Snackbar from "@/components/commons/Snackbar.vue";
 
 @Component({
-  components: { Piechart }
+  components: { Piechart, SimpleTable, Snackbar }
 })
 export default class Home extends Vue {
   piechartVacationLeavesTitle = "Vacation Leaves";
   piechartSickLeavesTitle = "Sick Leaves";
+  showSnackbar = false;
+
+  simpleTableHolidaysTitle = "Holidays";
+  simpleTableSickTitle = "Leaves";
 
   publicHolidaysDates: any[] = [];
 
@@ -44,6 +65,9 @@ export default class Home extends Vue {
 
   sickLeaveTaken = 0;
   vacationLeavesTaken = 0;
+
+  publicHolidaysRanged: PublicHolidayResponse[] = [];
+  leaveRanged: RangeLeaves[] = [];
   created() {
     // console.log("Setting leaves", leaves.getAppliedLeaves(user.userObject.id));
     if (user.userObject) {
@@ -52,14 +76,26 @@ export default class Home extends Vue {
         if (leaveData) {
           this.calculateLeaveCountForPiechart(leaveData[0], leaveData[1]);
         }
-      });
+      }),
+        (error: any) => {
+          
+        };
 
       leaves.getPublicHoliday().then(publicholidays => {
         if (publicholidays) {
-          let resp = LeaveUtils.groupPublicHolidays(publicholidays);
+          let resp: any[] = LeaveUtils.groupPublicHolidays(publicholidays);
           console.log("resp", resp);
+
+          console.log("this.publicHolidaysRanged", this.publicHolidaysRanged);
+
+          this.publicHolidaysRanged = resp || [];
         }
       });
+
+      this.leaveRanged = LeaveUtils.combineLeavesAndHoliday(
+        leaves.leavesSummary,
+        leaves.publicHolidaysList
+      );
     }
   }
 

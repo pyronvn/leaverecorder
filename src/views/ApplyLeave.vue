@@ -1,5 +1,8 @@
 <template>
   <v-app id="inspire">
+    <div v-if="showSnackbar">
+      <Snackbar :color="color" :text="text"></Snackbar>
+    </div>
     <v-tabs v-model="tab" background-color="#1e88e5" dark>
       <v-tab>Apply Leave</v-tab>
       <v-tab>View History</v-tab>
@@ -133,11 +136,16 @@ import {
 } from "@/store/models/models";
 import { Computed } from "vuex";
 import LeaveUtils from "@/components/commons/LeaveUtil";
+import Snackbar from "@/components/commons/Snackbar.vue";
 
-@Component
+@Component({
+  components: {
+    Snackbar
+  }
+})
 export default class ApplyLeave extends Vue {
   dateformat = "yyyy-MM-dd";
-  max = "2020-10-20";
+  max = "2020-12-31";
   min = "";
   tab = null;
   dates = [];
@@ -166,26 +174,43 @@ export default class ApplyLeave extends Vue {
   rowVal = [];
   individualItem: any[] = [];
 
-  beforeCreate() {
-    leaves.getPublicHoliday().then(publicholidays => {
-      if (publicholidays) {
-        LeaveUtils.groupPublicHolidays(publicholidays);
-        console.log("Before create", publicholidays);
-        publicholidays.forEach((val: any) => {
-          console.log("Value", val.date);
+  showSnackbar = false;
 
-          this.publicHolidaysDates.push(val.date);
-        });
-      }
-      console.log("publicHolidaysDates", this.publicHolidaysDates);
-
-      this.combineLeavesAndHoliday(
-        leaves.leavesSummary,
-        leaves.publicHolidaysList
-      );
-    });
-  }
+  beforeCreate() {}
   created() {
+    this.initialisePage();
+  }
+
+  initialisePage() {
+    leaves
+      .getAppliedLeaves(user.userObject ? user.userObject.id : -1)
+      .then(resp => {
+        this.completeLeaveList = [];
+        leaves.getPublicHoliday().then(publicholidays => {
+          if (publicholidays) {
+            LeaveUtils.groupPublicHolidays(publicholidays);
+            console.log("Before create", publicholidays);
+            publicholidays.forEach((val: any) => {
+              console.log("Value", val.date);
+
+              this.publicHolidaysDates.push(val.date);
+            });
+          }
+          console.log("publicHolidaysDates", this.publicHolidaysDates);
+
+          this.finalGrouping = LeaveUtils.combineLeavesAndHoliday(
+            leaves.leavesSummary,
+            leaves.publicHolidaysList
+          );
+
+          this.completeLeaveList = LeaveUtils.completeLeaveList;
+
+          this.updateCalendar();
+        });
+      });
+  }
+
+  updateCalendar() {
     console.log("Leaves summary", leaves.leavesSummary);
     this.leavesData = leaves.leavesSummary;
 
@@ -217,159 +242,6 @@ export default class ApplyLeave extends Vue {
     }
 
     return colorcode;
-  }
-  deleteItem(item: any) {}
-
-  getLeaveRange() {}
-
-  combineLeavesAndHoliday(
-    leaves: AppliedLeavesResponse[],
-    holidays: PublicHolidayResponse[] | null
-  ) {
-    let combinedData: CombinedLeave[] = [];
-    let sickDays: CombinedLeave[] = [];
-    let vacationDays: CombinedLeave[] = [];
-
-    leaves.forEach(data => {
-      if (data.type === "vacation") {
-        vacationDays.push({
-          id: data.id,
-          date: data.date,
-          type: data.type
-        });
-      } else if (data.type === "sick") {
-        sickDays.push({ id: data.id, date: data.date, type: data.type });
-      }
-      // combinedData.push({
-      //   date: data.date,
-      //   type: data.type
-      // });
-    });
-
-    console.log("Sick days", sickDays);
-    console.log("vacation days", vacationDays);
-
-    console.log("public holidays");
-    if (holidays) {
-      holidays.forEach(data => {
-        sickDays.push({
-          id: -1,
-          date: data.date,
-          type: "PublicHoliday"
-        });
-
-        vacationDays.push({
-          id: -1,
-          date: data.date,
-          type: "PublicHoliday"
-        });
-      });
-    }
-
-    // console.log("Combined DAta", combinedData);
-
-    // combinedData = this.sortCombinedData(combinedData);
-
-    this.sortCombinedData(sickDays);
-    this.sortCombinedData(vacationDays);
-
-    console.log("Combined Data after sort", combinedData);
-    sickDays.concat(this.populateWeekends(sickDays));
-    vacationDays.concat(this.populateWeekends(vacationDays));
-
-    this.completeLeaveList = sickDays.map(data => data.date);
-    this.completeLeaveList.concat(vacationDays.map(data => data.date));
-
-    let groupedSickLeaves = LeaveUtils.preparedRangedData(
-      sickDays,
-      user.userObject ? user.userObject.id : -1
-    );
-    let groupedVacationLeaves = LeaveUtils.preparedRangedData(
-      vacationDays,
-      user.userObject ? user.userObject.id : -1
-    );
-
-    console.log("Combined DAta getting weekends", combinedData);
-    //  this.preparedRangedData(combinedData);
-    console.log("Range data groupedSickLeaves", groupedSickLeaves);
-    console.log("Range data groupedVacationLeaves", groupedVacationLeaves);
-
-    groupedSickLeaves = LeaveUtils.cleanupVacationLeaves(groupedSickLeaves);
-    groupedVacationLeaves = LeaveUtils.cleanupVacationLeaves(
-      groupedVacationLeaves
-    );
-
-    this.finalGrouping = groupedSickLeaves.concat(groupedVacationLeaves);
-  }
-
-  sortCombinedData(combinedData: CombinedLeave[]): CombinedLeave[] {
-    combinedData.sort((date1, date2) => {
-      return date1.date > date2.date ? 1 : -1;
-    });
-
-    return combinedData;
-  }
-
-  populateWeekends(combinedData: CombinedLeave[]): CombinedLeave[] {
-    let startDate = moment(combinedData[0].date);
-    let startDate2 = moment(combinedData[0].date);
-    let endData = moment(combinedData[combinedData.length - 1].date);
-    let result: CombinedLeave[] = [];
-
-    if (endData.diff(startDate, "days") > 1) {
-      let momentSaturdayDay = startDate.clone();
-      while (momentSaturdayDay.day(13).isBefore(endData)) {
-        combinedData.push({
-          id: -1,
-          date: momentSaturdayDay.clone().format("YYYY-MM-DD"),
-          type: "Weekend"
-        });
-      }
-      let momentSundayDay = startDate2.clone();
-
-      while (momentSundayDay.day(7).isBefore(endData)) {
-        combinedData.push({
-          id: -1,
-          date: momentSundayDay.clone().format("YYYY-MM-DD"),
-          type: "Weekend"
-        });
-      }
-    }
-    console.log("Before first saturday", combinedData);
-
-    this.sortCombinedData(combinedData);
-    this.getFirstSaturday(combinedData);
-
-    return combinedData;
-  }
-
-  getFirstSaturday(combinedData: CombinedLeave[]) {
-    if (combinedData && combinedData.length > 1) {
-      let firstDay = moment(combinedData[0].date);
-
-      let firstWeekendIndex = -1;
-
-      for (let index = 0; index <= combinedData.length - 1; index++) {
-        if (combinedData[index].type === "Weekend") {
-          firstWeekendIndex = index;
-          break;
-        }
-      }
-
-      if (firstWeekendIndex !== -1) {
-        let firstSunday = moment(combinedData[firstWeekendIndex].date);
-
-        let previousSaturday = firstSunday.subtract(1, "days");
-        combinedData.push({
-          id: -1,
-          date: previousSaturday.clone().format("YYYY-MM-DD"),
-          type: "Weekend"
-        });
-
-        console.log("After first saturday", combinedData);
-        return this.sortCombinedData(combinedData);
-      }
-    } else return [];
   }
 
   splitSickLeavesAndVacation(combinedData: CombinedLeave[]) {
@@ -448,7 +320,14 @@ export default class ApplyLeave extends Vue {
 
       if (user.userObject) {
         console.log("appliedLeaveDates", appliedLeaveDates);
-        leaves.applySubmittedLeave(appliedLeaveDates);
+        leaves.applySubmittedLeave(appliedLeaveDates).then(
+          (resp: any) => {
+            this.leaveType = "";
+            this.dates = [];
+            this.initialisePage();
+          },
+          (error: any) => {}
+        );
       }
     } else {
       let submittedLeave = {} as Leaves;
@@ -461,7 +340,14 @@ export default class ApplyLeave extends Vue {
 
       leavesArray.push(submittedLeave);
 
-      leaves.applySubmittedLeave(leavesArray);
+      leaves.applySubmittedLeave(leavesArray).then(
+        (resp: any) => {
+          this.leaveType = "";
+          this.dates = [];
+          this.initialisePage();
+        },
+        (error: any) => {}
+      );
     }
   }
   parentCheckboxChanged(val: any) {

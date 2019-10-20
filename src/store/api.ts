@@ -25,7 +25,7 @@ export async function login1(
 
     return resp.data as UserResponse;
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 }
 
@@ -37,7 +37,7 @@ export async function getAppliedLeaves(
 
     return resp.data as AppliedLeavesResponse[];
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 }
 
@@ -49,7 +49,7 @@ export async function getPublicHolidays(): Promise<
 
     return resp.data as PublicHolidayResponse[];
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 }
 
@@ -62,9 +62,9 @@ export async function applyLeave(
     };
     const resp = await api.post("/leaves", body);
 
-    return resp.data as any;
+    return resp as any;
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 }
 
@@ -72,8 +72,8 @@ export async function deleteLeaves(leaves: string): Promise<any | undefined> {
   try {
     const resp = await api.delete("/leaves?ids=" + leaves);
 
-    return resp.data as any;
+    return resp as any;
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 }

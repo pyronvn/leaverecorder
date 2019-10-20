@@ -89,7 +89,12 @@ class LeavesModule extends VuexModule {
 
   @Action
   async applySubmittedLeave(appliedLeave: Leaves[]) {
-    const resp = await applyLeave(appliedLeave);
+    const resp = await applyLeave(appliedLeave).then(
+      resp => {},
+      (error: any) => {
+        throw error;
+      }
+    );
   }
 
   @Action

@@ -3,6 +3,7 @@ import Router from "vue-router";
 import Home from "./views/Home.vue";
 import Login from "./views/Login.vue";
 import ApplyLeave from "./views/ApplyLeave.vue";
+import user from "@/store/modules/user.ts";
 
 Vue.use(Router);
 
@@ -11,17 +12,44 @@ export default new Router({
     {
       path: "/",
       name: "home",
-      component: Home
+      component: Home,
+      beforeEnter: (to, from, next) => {
+        if (!user.userObject) {
+          next({
+            name: "login"
+          });
+        } else {
+          next();
+        }
+      }
     },
     {
       path: "/login",
       name: "login",
-      component: Login
+      component: Login,
+      beforeEnter: (to, from, next) => {
+        if (user.userObject) {
+          next({
+            name: "home"
+          });
+        } else {
+          next();
+        }
+      }
     },
     {
       path: "/applyleave",
       name: "applyleave",
-      component: ApplyLeave
+      component: ApplyLeave,
+      beforeEnter: (to, from, next) => {
+        if (!user.userObject) {
+          next({
+            name: "login"
+          });
+        } else {
+          next();
+        }
+      }
     }
   ]
 });
