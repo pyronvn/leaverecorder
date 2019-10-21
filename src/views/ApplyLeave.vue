@@ -31,7 +31,7 @@
                             <v-col>
                               <v-date-picker
                                 range
-                                :min="new Date().toISOString().substr(0, 10)"
+                                :min="min"
                                 :max="lastDateOfThisYear"
                                 :no-title="notitle"
                                 v-model="dates"
@@ -163,6 +163,7 @@ export default class ApplyLeave extends Vue {
 
   lastDateOfThisYear = new Date().getFullYear() + "-12-31";
   tab = null;
+  min = moment(new Date()).format(Constants.DATE_FORMAT);
   dates = [];
   leaveType = "";
   items = ["Sick", "Vacation"];
