@@ -57,21 +57,13 @@
         {{ getTime() }}
       </div>-->
 
-      <!-- <div class="field created-at">{{ datenow }}</div> -->
       <div class="flex-grow-1"></div>
+
+      <div v-if="loggedInUserName" class="pr-5">{{ displayTime }}</div>
       <router-link to="/">
         <v-btn v-if="loggedInUserName" text>HOME</v-btn>
       </router-link>
-      <!--<v-btn  icon large>
-         <v-avatar size="32px" item>
-          <v-img
-            src="https://cdn.vuetifyjs.com/images/logos/logo.svg"
-            alt="Vuetify"
-          ></v-img>
-        </v-avatar>
-      </v-btn>-->
 
-      <!-- <div v-if="loggedInUserName">Welcome {{ loggedInUserName }}</div> -->
       <div v-if="loggedInUserName">
         <v-menu offset-y>
           <template v-slot:activator="{ on }">
@@ -81,9 +73,9 @@
           </template>
           <v-list>
             <v-list-item v-for="(item, index) in dropdown" :key="index" @click>
-              <v-list-item-title @click="signout()">{{
-                item
-              }}</v-list-item-title>
+              <v-list-item-title @click="signout()">
+                {{ item }}
+              </v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
@@ -106,6 +98,7 @@ import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user";
 import Snackbar from "@/components/commons/views/Snackbar.vue";
 import moment from "moment";
+import { Constants } from "@/components/commons/Constants";
 
 @Component({
   components: { Snackbar }
@@ -116,72 +109,58 @@ export default class Navbar extends Vue {
   drawer = null;
   dialog = false;
 
-  // time = this.createdAtDisplay();
+  time: string = "";
 
-  datenow = "";
-  isUserLoggedIn() {
-    return user.userName;
-  }
+  datenow = new Date();
+
+  hours = this.datenow.getHours();
+  minutes = this.datenow.getMinutes();
+
+  displayTime = "00:00";
 
   items = [
     { icon: "contacts", text: "Dashboard", link: "/" },
-    { icon: "history", text: "Apply Leave", link: "/leave" }
+    { icon: "history", text: "Leave", link: "/leave" }
   ];
+
+  isUserLoggedIn() {
+    return user.userName;
+  }
 
   get loggedInUserName() {
     return user.userName;
   }
 
-  // mounted() {
-  //   this.createdAtDisplay();
-  // }
-
-  mounted() {
-    this.time();
+  created() {
+    this.calculateTime();
   }
-
-  time() {
-    let self = this;
-    this.datenow = moment().format("HH:mm:ss");
-    setInterval(this.time, 6000);
-  }
-
-  // createdAtDisplay() {
-  //   return moment(new Date()).format("YYYY-MM-DD h:mm:s A");
-  // }
-  // created() {
-  //   this.displayTime();
-  // }
-
   signout() {
     user.logout().then(() => {
       this.$router.push("/login");
     });
   }
 
-  displayTime() {
-    let today = new Date();
-    let hour = today.getHours();
-    let minutes = today.getMinutes();
-    let seconds = today.getSeconds();
-    minutes = this.checkTime(minutes);
-    seconds = this.checkTime(seconds);
+  calculateTime() {
+    this.displayTime =
+      (this.hours < 10 ? "0" + this.hours : this.hours) +
+      ":" +
+      (this.minutes < 10 ? "0" + this.minutes : this.minutes);
 
-    this.time = hour + ":" + minutes + ":" + seconds;
+    setInterval(() => {
+      this.minutes++;
+      if (this.minutes === 60) {
+        this.minutes = 0;
+        this.hours++;
+        if (this.hours === 24) {
+          this.hours = 0;
+        }
+      }
 
-    setInterval(this.displayTime(), 5000);
-  }
-
-  getTime() {
-    this.displayTime();
-    return this.time;
-  }
-
-  checkTime(i: any) {
-    if (i < 10) {
-      i = "0" + i;
-    } // add zero in front of numbers < 10
-    return i;
+      this.displayTime =
+        (this.hours < 10 ? "0" + this.hours : this.hours) +
+        ":" +
+        (this.minutes < 10 ? "0" + this.minutes : this.minutes);
+    }, 60000);
   }
 }
 </script>

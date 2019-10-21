@@ -20,7 +20,7 @@ class UsersModule extends VuexModule {
   user: UserResponse | null = null;
 
   get userName() {
-    return (this.user && this.user.name) || null;
+    return (this.user && this.user.name) || "";
   }
 
   get userObject() {

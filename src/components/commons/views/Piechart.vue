@@ -7,12 +7,15 @@
             align="center"
             justify="center"
             style="justify-content: center;"
-          >{{ title }}</v-list-item-title>
+            >{{ title }}</v-list-item-title
+          >
           <v-row>
             <v-col align="center">
               <svg height="20" width="20" viewBox="0 0 20 20">
-                <circle r="10" cx="10" cy="10" fill="bisque" @mouseover="mouseHover($event)">
-                  <title v-if="remainingLeaves >= 0">Leaves remaining : {{ remainingLeaves }}</title>
+                <circle r="10" cx="10" cy="10" fill="bisque">
+                  <title v-if="remainingLeaves >= 0">
+                    Leaves remaining : {{ remainingLeaves }}
+                  </title>
                 </circle>
 
                 <circle
@@ -25,7 +28,9 @@
                   :stroke-dasharray="calculateSectorArea"
                   transform="rotate(-90) translate(-20)"
                 >
-                  <title v-if="takenLeaves > 0">Leaves applied : {{ takenLeaves }}</title>
+                  <title v-if="takenLeaves > 0">
+                    Leaves applied : {{ takenLeaves }}
+                  </title>
                 </circle>
               </svg>
             </v-col>

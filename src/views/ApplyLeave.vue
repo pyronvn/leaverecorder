@@ -9,12 +9,17 @@
 
       <v-tab-item lazy>
         <div>
-          <v-form>
+          <v-form ref="form">
             <v-card flat tile>
               <v-container fluid>
                 <v-row align="center">
                   <v-col class="d-flex" cols="12" md="2">
-                    <v-select v-model="leaveType" :items="items" label="Leave Type"></v-select>
+                    <v-select
+                      v-model="leaveType"
+                      :items="items"
+                      label="Leave Type"
+                      required
+                    ></v-select>
                   </v-col>
                 </v-row>
                 <v-row>
@@ -62,7 +67,8 @@
                       color="primary"
                       @click.prevent="applyLeave()"
                       :disabled="isFormInValid() && userObj !== null"
-                    >Apply Leave</v-btn>
+                      >Apply Leave</v-btn
+                    >
                   </v-col>
                 </v-row>
               </v-container>
@@ -122,7 +128,8 @@
               color="error"
               :disabled="!individualItem.length > 0"
               @click.prevent="deleteLeaves()"
-            >Delete</v-btn>
+              >Delete</v-btn
+            >
           </v-col>
         </v-app>
       </v-tab-item>
@@ -144,6 +151,7 @@ import { CombinedLeave } from "@/store/models/CombinedLeave";
 import { Leaves } from "@/store/models/Leaves";
 import { LeaveType } from "@/store/models/LeaveType";
 import { Constants } from "@/components/commons/Constants";
+import { userApi } from "@/store/api/UserApi";
 
 @Component({
   components: {
@@ -184,6 +192,10 @@ export default class ApplyLeave extends Vue {
   showSnackbar = false;
   color = "";
   text = "";
+
+  rule = {
+    name: [(val: string) => (val || "").length > 0 || "This field is required"]
+  };
 
   created() {
     this.initialisePage();
@@ -351,13 +363,16 @@ export default class ApplyLeave extends Vue {
       if (user.userObject) {
         leaves.applySubmittedLeave(appliedLeaveDates).then(
           (resp: any) => {
-            this.initialisePage();
-            this.color = Constants.COLOR_GREEN;
-            this.text = "Leave applied successfully!";
-            this.showSnackbar = true;
+            user.loginSubmit({ userid: user.userName }).then(() => {
+              this.initialisePage();
+              this.color = Constants.COLOR_GREEN;
+              this.text = "Leave applied successfully!";
+              this.showSnackbar = true;
 
-            this.leaveType = "";
-            this.dates = [];
+              this.leaveType = "";
+              this.dates = [];
+              this.$refs.form.resetValidation();
+            });
           },
           (error: any) => {
             this.color = Constants.COLOR_ERROR;
@@ -367,6 +382,8 @@ export default class ApplyLeave extends Vue {
         );
       }
     } else {
+      this.showSnackbar = false;
+
       this.color = Constants.COLOR_ERROR;
       this.text = "You dont have sufficient leaves";
       this.showSnackbar = true;
@@ -403,11 +420,13 @@ export default class ApplyLeave extends Vue {
     this.showSnackbar = false;
     leaves.deleteLeaves(this.individualItem.toString()).then(
       resp => {
-        this.initialisePage();
-        this.text = "Leaves deleted successfully!";
-        this.color = Constants.COLOR_GREEN;
-        this.showSnackbar = true;
-        this.individualItem = [];
+        user.loginSubmit({ userid: user.userName }).then(() => {
+          this.initialisePage();
+          this.text = "Leaves deleted successfully!";
+          this.color = Constants.COLOR_GREEN;
+          this.showSnackbar = true;
+          this.individualItem = [];
+        });
       },
       (error: any) => {
         this.text = "Something went wrong";
