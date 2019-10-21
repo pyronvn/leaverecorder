@@ -24,12 +24,11 @@
     </v-app>
   </div>
 </template>
-<script>
+<script lang="ts">
 import { Vue, Component } from "vue-property-decorator";
 import user from "@/store/modules/user.ts";
-import { UserOnSubmit, UserResponse, SnackbarObj } from "@/store/models/models";
-import Piechart from "@/components/commons/Piechart.vue";
-import Snackbar from "@/components/commons/Snackbar.vue";
+import Piechart from "@/components/commons/views/Piechart.vue";
+import Snackbar from "@/components/commons/views/Snackbar.vue";
 
 @Component({
   components: {
@@ -45,16 +44,14 @@ export default class Login extends Vue {
   error = false;
   showSnackbar = false;
   rule = {
-    invalidUser: [val => (val && val.length !== 0) || "Enter User ID"]
+    invalidUser: [(val: string) => (val && val.length !== 0) || "Enter User ID"]
   };
+
   loginSubmit() {
     this.showSnackbar = false;
-    console.log("Login called", this.userId, user);
-
     let userSubmit = { userid: this.userId };
-    console.log("this.SnackbarModule", this.snackbarstore);
 
-    const userResponse = user.loginSubmit1(userSubmit).then(user => {
+    const userResponse = user.loginSubmit(userSubmit).then(user => {
       if (user.id > 0) {
         this.userIdError = false;
         this.$router.push("/");
@@ -65,8 +62,6 @@ export default class Login extends Vue {
         this.$refs.form.reset();
       }
     });
-
-    console.log(userResponse);
   }
 }
 </script>

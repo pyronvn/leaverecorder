@@ -6,17 +6,16 @@ import {
   getModule
 } from "vuex-module-decorators";
 import store from "@/store";
-import {
-  AppliedLeavesResponse,
-  PublicHolidayResponse,
-  Leaves
-} from "@/store/models/models";
+
 import {
   getAppliedLeaves,
   getPublicHolidays,
   applyLeave,
   deleteLeaves
-} from "@/store/api";
+} from "@/store/api/LeaveApi";
+import { AppliedLeavesResponse } from "@/store/models/AppliedLeaveResponse";
+import { PublicHolidayResponse } from "@/store/models/PublicHolidayResponse";
+import { Leaves } from "@/store/models/Leaves";
 
 @Module({
   namespaced: true,
@@ -49,15 +48,11 @@ class LeavesModule extends VuexModule {
   @Mutation
   setAppliedLeaves(appliedLeaves: AppliedLeavesResponse[]) {
     this.leaveResp = appliedLeaves;
-
-    //this.setLeavesCount(appliedLeaves);
   }
 
   @Action({ commit: "setAppliedLeaves" })
   async getAppliedLeaves(userId: number) {
     const appliedLeaves = await getAppliedLeaves(userId);
-
-    console.log("action getting leaves", appliedLeaves);
 
     return appliedLeaves;
   }
@@ -75,8 +70,6 @@ class LeavesModule extends VuexModule {
 
   @Mutation
   setPublicHoliday(publicHolidays: PublicHolidayResponse[]) {
-    console.log("Set public holiday", publicHolidays);
-
     this.publicHolidays = publicHolidays;
   }
 

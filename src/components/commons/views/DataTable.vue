@@ -1,7 +1,12 @@
 <template>
   <v-card>
     <v-card-text>
-      <v-list-item-title align="center" justify="center" style="justify-content: center;">{{title}}</v-list-item-title>
+      <v-list-item-title
+        align="center"
+        justify="center"
+        style="justify-content: center;"
+        >{{ title }}</v-list-item-title
+      >
     </v-card-text>
     <v-simple-table height="250px">
       <template v-slot:default>
@@ -24,11 +29,11 @@
   </v-card>
 </template>
 
-<script lang ='ts'>
+<script lang="ts">
 import { Vue, Component, Prop } from "vue-property-decorator";
 
 @Component
-export default class SimpleTable extends Vue {
+export default class DataTable extends Vue {
   @Prop()
   title!: string;
 
@@ -37,5 +42,4 @@ export default class SimpleTable extends Vue {
 }
 </script>
 
-<style>
-</style>
+<style></style>

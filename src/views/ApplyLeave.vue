@@ -30,7 +30,7 @@
                                 :max="lastDateOfThisYear"
                                 :no-title="notitle"
                                 v-model="dates"
-                                :events="functionEvents"
+                                :events="setColorCode"
                                 :allowed-dates="holidaysDates"
                               ></v-date-picker>
                             </v-col>
@@ -117,35 +117,6 @@
             </template>
           </v-data-table>
 
-          <!-- <v-simple-table fixed-header>
-            <template v-slot:default>
-              <thead>
-                <tr>
-                  <th class="text-left"></th>
-                  <th class="text-left">Start Date</th>
-                  <th class="text-left">End Date</th>
-                  <th class="text-left">Type</th>
-                  <th class="text-left"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in finalGrouping" :key="item.startDate">
-                  <td>
-                    <v-checkbox v-model="checkboxVal" :value="item.leaveRange"></v-checkbox>
-                  </td>
-                  <td>{{ item.startDate }}</td>
-                  <td>{{ item.endDate }}</td>
-                  <td>{{ item.type[0] }}</td>
-                  <td>
-                    <tr>{{ item.leaveRange[0].date }}</tr>
-                    <tr>{{ item.leaveRange[0].date }}</tr>
-                    <tr>{{ item.leaveRange[0].date }}</tr>
-                    <tr>{{ item.leaveRange[0].date }}</tr>
-                  </td>
-                </tr>
-              </tbody>
-            </template>
-          </v-simple-table>-->
           <v-col cols="12" md="3">
             <v-btn
               color="error"
@@ -164,17 +135,15 @@ import { Vue, Component } from "vue-property-decorator";
 import leaves from "@/store/modules/leaves-store";
 import moment from "moment";
 import user from "@/store/modules/user.ts";
-import {
-  PublicHolidayResponse,
-  AppliedLeavesResponse,
-  RangeLeaves,
-  CombinedLeave,
-  LeaveType,
-  Leaves
-} from "@/store/models/models";
 import { Computed } from "vuex";
 import LeaveUtils from "@/components/commons/LeaveUtil";
-import Snackbar from "@/components/commons/Snackbar.vue";
+import Snackbar from "@/components/commons/views/Snackbar.vue";
+import { AppliedLeavesResponse } from "@/store/models/AppliedLeaveResponse";
+import { RangeLeaves } from "@/store/models/RangeLeaves";
+import { CombinedLeave } from "@/store/models/CombinedLeave";
+import { Leaves } from "@/store/models/Leaves";
+import { LeaveType } from "@/store/models/LeaveType";
+import { Constants } from "@/components/commons/Constants";
 
 @Component({
   components: {
@@ -182,15 +151,13 @@ import Snackbar from "@/components/commons/Snackbar.vue";
   }
 })
 export default class ApplyLeave extends Vue {
-  dateformat = "yyyy-MM-dd";
-  // lastDateOfThisYear = moment(
-  //   new Date(new Date().getFullYear(), 11, 31).toString()
-  // ).format("YYYY-MM-DD");
+  dateformat = Constants.DATE_FORMAT;
+
   lastDateOfThisYear = new Date().getFullYear() + "-12-31";
   tab = null;
   dates = [];
   leaveType = "";
-  items = ["Sick", "Vacation"]; //Object.keys(LeaveType).map((k: any) => LeaveType[k].toUpperCase());
+  items = ["Sick", "Vacation"];
   leavesData: AppliedLeavesResponse[] = [];
   publicHolidaysDates: any[] = [];
   leavesTakenDates: any[] = [];
@@ -218,13 +185,13 @@ export default class ApplyLeave extends Vue {
   color = "";
   text = "";
 
-  beforeCreate() {}
   created() {
-    console.log("lastDateOfThisYear", this.lastDateOfThisYear);
-
     this.initialisePage();
   }
 
+  /**
+   * Load all required data for the page
+   */
   initialisePage() {
     this.showSnackbar = false;
     leaves
@@ -235,14 +202,10 @@ export default class ApplyLeave extends Vue {
           publicholidays => {
             if (publicholidays) {
               LeaveUtils.groupPublicHolidays(publicholidays);
-              console.log("Before create", publicholidays);
               publicholidays.forEach((val: any) => {
-                console.log("Value", val.date);
-
                 this.publicHolidaysDates.push(val.date);
               });
             }
-            console.log("publicHolidaysDates", this.publicHolidaysDates);
 
             this.finalGrouping = LeaveUtils.combineLeavesAndHoliday(
               leaves.leavesSummary,
@@ -254,7 +217,7 @@ export default class ApplyLeave extends Vue {
             this.updateCalendar();
           },
           (error: any) => {
-            this.color = "error";
+            this.color = Constants.COLOR_ERROR;
             this.text = "Something went wrong";
             this.showSnackbar = true;
           }
@@ -262,10 +225,12 @@ export default class ApplyLeave extends Vue {
       });
   }
 
+  /**
+   * Update calendar on delete or apply of leave
+   */
   updateCalendar() {
     this.leavesData = [];
     this.leavesTakenDates = [];
-    console.log("Leaves summary", leaves.leavesSummary);
     this.leavesData = leaves.leavesSummary;
 
     this.leavesData.forEach(data => {
@@ -273,55 +238,56 @@ export default class ApplyLeave extends Vue {
     });
   }
 
+  /**
+   * Disable selection in calendar for weekends, holidays and leaves
+   */
   holidaysDates(val: any) {
-    console.log("Allowed", val);
-
     if (LeaveUtils.completeLeaveList.indexOf(val) > -1) {
       return 0;
     } else {
       return 1;
     }
-    // console.log("Only datess", this.publicHolidays);
   }
 
-  functionEvents(date: string) {
+  /**
+   * Set color for holidays and leaves in calendar
+   */
+  setColorCode(date: string) {
     let colorcode: any[] = [];
 
     if (this.leavesTakenDates.indexOf(date) > -1) {
-      colorcode.push("green");
+      colorcode.push(Constants.COLOR_GREEN);
     } else if (this.publicHolidaysDates.indexOf(date) > -1) {
-      colorcode.push("blue");
+      colorcode.push(Constants.COLOR_BLUE);
     }
 
     return colorcode;
   }
 
+  /**
+   * Splitting Sick leaves and vacation leaves to help in calculation of range
+   * To avoid sick and vacation to be grouped together
+   */
   splitSickLeavesAndVacation(combinedData: CombinedLeave[]) {
-    let sickTest: CombinedLeave[] = [];
-    let vacationTest: CombinedLeave[] = [];
-
-    // sickTest.concat(
-    //   combinedData.filter(data => {
-    //     data.type === "sick";
-    //   })
-    // );
+    let sickLeaveList: CombinedLeave[] = [];
+    let vacationLeaveList: CombinedLeave[] = [];
 
     combinedData.forEach(data => {
       if (data.type === "sick") {
-        sickTest.push(data);
+        sickLeaveList.push(data);
       } else {
-        vacationTest.push(data);
+        vacationLeaveList.push(data);
       }
     });
 
     let sickLeave: RangeLeaves[] = LeaveUtils.preparedRangedData(
-      sickTest,
-      user.userObject ? user.userObject.id : -1
+      sickLeaveList,
+      user.userObject.id
     );
 
     let vacationWithWeekend: RangeLeaves[] = LeaveUtils.preparedRangedData(
-      vacationTest,
-      user.userObject ? user.userObject.id : -1
+      vacationLeaveList,
+      user.userObject.id
     );
 
     return sickLeave.concat(vacationWithWeekend);
@@ -334,8 +300,11 @@ export default class ApplyLeave extends Vue {
     return true;
   }
 
+  /**
+   * Applying leave. Calculating correct date ranges (Exclude weekends or vacations or leaves if any)
+   * and check with available leave count
+   */
   applyLeave() {
-    console.log("completeLeaveList", this.completeLeaveList);
     this.showSnackbar = false;
 
     let leaveType = this.leaveType;
@@ -346,11 +315,8 @@ export default class ApplyLeave extends Vue {
 
     let startAppliedDate = moment(leaveRange[0]);
 
-    console.log("leaveRange[0]", leaveRange[0], startAppliedDate);
-
     if (leaveRange.length > 1) {
       endAppliedDate = moment(leaveRange[1]);
-      console.log("endAppliedDate", leaveRange[1], endAppliedDate);
 
       if (startAppliedDate.isAfter(endAppliedDate)) {
         let tempDate = startAppliedDate;
@@ -359,8 +325,7 @@ export default class ApplyLeave extends Vue {
       }
 
       while (startAppliedDate.clone().isSameOrBefore(endAppliedDate)) {
-        let tempDate = startAppliedDate.clone().format("YYYY-MM-DD");
-        console.log("tempDate", tempDate);
+        let tempDate = startAppliedDate.clone().format(Constants.DATE_FORMAT);
 
         if (this.completeLeaveList.indexOf(tempDate) === -1) {
           appliedLeaveDates.push({
@@ -384,11 +349,10 @@ export default class ApplyLeave extends Vue {
 
     if (this.verifyLeaveCount(leaveType, appliedLeaveDates)) {
       if (user.userObject) {
-        console.log("appliedLeaveDates", appliedLeaveDates);
         leaves.applySubmittedLeave(appliedLeaveDates).then(
           (resp: any) => {
             this.initialisePage();
-            this.color = "green";
+            this.color = Constants.COLOR_GREEN;
             this.text = "Leave applied successfully!";
             this.showSnackbar = true;
 
@@ -396,18 +360,19 @@ export default class ApplyLeave extends Vue {
             this.dates = [];
           },
           (error: any) => {
-            this.color = "error";
-            this.text = "Leave applied successfully!";
+            this.color = Constants.COLOR_ERROR;
+            this.text = "Something went wrong";
             this.showSnackbar = true;
           }
         );
       }
     } else {
-      this.color = "error";
-      this.text = "You dont jave sufficient leaves";
+      this.color = Constants.COLOR_ERROR;
+      this.text = "You dont have sufficient leaves";
       this.showSnackbar = true;
     }
   }
+
   parentCheckboxChanged(val: any) {
     if (val.value) {
       val.item.leaveRange.map((data: AppliedLeavesResponse) => {
@@ -416,11 +381,6 @@ export default class ApplyLeave extends Vue {
             this.individualItem.push(data.id);
         }
       });
-      // this.individualItem.push(
-      //   val.item.leaveRange.map(data => {
-      //     data.id;
-      //   })
-      // );
     } else {
       val.item.leaveRange.map((data: any) => {
         let index = this.individualItem.indexOf(data.id);
@@ -430,7 +390,6 @@ export default class ApplyLeave extends Vue {
         }
       });
     }
-    console.log(val);
   }
 
   childChanged(val: any) {
@@ -439,18 +398,20 @@ export default class ApplyLeave extends Vue {
       this.selected.splice(index, 1);
     }
   }
+
   deleteLeaves() {
     this.showSnackbar = false;
     leaves.deleteLeaves(this.individualItem.toString()).then(
       resp => {
         this.initialisePage();
-        this.text = "Leaves delete successfully!";
-        this.color = "green";
+        this.text = "Leaves deleted successfully!";
+        this.color = Constants.COLOR_GREEN;
         this.showSnackbar = true;
+        this.individualItem = [];
       },
       (error: any) => {
-        this.text = "Some thing went wrong";
-        this.color = "error";
+        this.text = "Something went wrong";
+        this.color = Constants.COLOR_ERROR;
         this.showSnackbar = true;
       }
     );

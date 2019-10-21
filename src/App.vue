@@ -6,16 +6,12 @@
 
 <script>
 import { Vue, Component } from "vue-property-decorator";
-import Navbar from "@/components/Navbar.vue";
+import Navbar from "@/components/commons/views/Navbar.vue";
 
 @Component({
   components: {
     Navbar
   }
 })
-export default class App extends Vue {
-  clickedMethod(s) {
-    console.log("Clickeddd");
-  }
-}
+export default class App extends Vue {}
 </script>

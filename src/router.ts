@@ -38,8 +38,8 @@ export default new Router({
       }
     },
     {
-      path: "/applyleave",
-      name: "applyleave",
+      path: "/leave",
+      name: "leave",
       component: ApplyLeave,
       beforeEnter: (to, from, next) => {
         if (!user.userObject) {

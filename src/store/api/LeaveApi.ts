@@ -4,8 +4,7 @@ import {
   UserResponse,
   AppliedLeavesResponse,
   PublicHolidayResponse,
-  Leaves,
-  DeleteLeave
+  Leaves
 } from "@/store/models/models";
 
 export const api = axios.create({
@@ -15,19 +14,6 @@ export const api = axios.create({
     "x-api-key": "grdcJnsPdRac8aor66yV46ySis5xDKbZ3KNinTqE"
   }
 });
-
-export async function login1(
-  user: UserOnSubmit
-): Promise<UserResponse | undefined> {
-  try {
-    console.log("Async login", user.userid);
-    const resp = await api.get("/users?name=" + user.userid);
-
-    return resp.data as UserResponse;
-  } catch (error) {
-    throw error;
-  }
-}
 
 export async function getAppliedLeaves(
   userId: number

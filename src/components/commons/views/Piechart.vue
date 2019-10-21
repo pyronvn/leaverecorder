@@ -7,12 +7,12 @@
             align="center"
             justify="center"
             style="justify-content: center;"
-          >{{title}}</v-list-item-title>
+          >{{ title }}</v-list-item-title>
           <v-row>
             <v-col align="center">
               <svg height="20" width="20" viewBox="0 0 20 20">
                 <circle r="10" cx="10" cy="10" fill="bisque" @mouseover="mouseHover($event)">
-                  <title v-if="remainingLeaves >= 0">Leaves remaining : {{remainingLeaves}}</title>
+                  <title v-if="remainingLeaves >= 0">Leaves remaining : {{ remainingLeaves }}</title>
                 </circle>
 
                 <circle
@@ -22,11 +22,10 @@
                   fill="transparent"
                   stroke="tomato"
                   stroke-width="10"
-                  :stroke-dasharray="calculate"
+                  :stroke-dasharray="calculateSectorArea"
                   transform="rotate(-90) translate(-20)"
-                  @mouseover="mouseHover($event)"
                 >
-                  <title v-if="takenLeaves > 0">Leaves applied : {{takenLeaves}}</title>
+                  <title v-if="takenLeaves > 0">Leaves applied : {{ takenLeaves }}</title>
                 </circle>
               </svg>
             </v-col>
@@ -36,11 +35,11 @@
               <ul class="legend">
                 <li>
                   <span class="totalleaves"></span>
-                  Leaves Remaining : {{remainingLeaves}}
+                  Leaves Remaining : {{ remainingLeaves }}
                 </li>
                 <li>
                   <span class="leavestaken"></span>
-                  Leaves Applied : {{takenLeaves}}
+                  Leaves Applied : {{ takenLeaves }}
                 </li>
               </ul>
             </v-col>
@@ -51,13 +50,11 @@
   </div>
 </template>
 
-<script lang='ts'>
+<script lang="ts">
 import { Vue, Component, Prop } from "vue-property-decorator";
 
 @Component
 export default class Piechart extends Vue {
-  demoVar = 50;
-
   @Prop()
   title!: string;
 
@@ -67,10 +64,7 @@ export default class Piechart extends Vue {
   @Prop()
   remainingLeaves!: number;
 
-  mouseHover(resp: any) {
-    console.log(this.title);
-  }
-  get calculate() {
+  get calculateSectorArea() {
     return (
       (this.takenLeaves / (this.takenLeaves + this.remainingLeaves)) * 31.4 +
       " " +
