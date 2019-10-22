@@ -309,8 +309,6 @@ export default class LeaveUtils {
 
   static getFirstSaturday(combinedData: CombinedLeave[]) {
     if (combinedData && combinedData.length > 1) {
-      let firstDay = moment(combinedData[0].date);
-
       let firstWeekendIndex = -1;
 
       for (let index = 0; index <= combinedData.length - 1; index++) {
@@ -337,9 +335,9 @@ export default class LeaveUtils {
 
   static populateWeekends(combinedData: CombinedLeave[]): CombinedLeave[] {
     if (combinedData.length > 0) {
-      let startDate = moment(combinedData[0].date);
-      let startDate2 = moment(combinedData[0].date);
-      let endData = moment(combinedData[combinedData.length - 1].date);
+      let startDate = moment(new Date().getFullYear() + "-01-01");
+      let startDateTemp = moment(new Date().getFullYear() + "-01-01");
+      let endData = moment(new Date().getFullYear() + "-12-31");
 
       if (endData.diff(startDate, "days") > 1) {
         let momentSaturdayDay = startDate.clone();
@@ -350,7 +348,7 @@ export default class LeaveUtils {
             type: "Weekend"
           });
         }
-        let momentSundayDay = startDate2.clone();
+        let momentSundayDay = startDateTemp.clone();
 
         while (momentSundayDay.day(7).isBefore(endData)) {
           combinedData.push({
